@@ -58,7 +58,13 @@ impl Etuovi {
                 "residentialPropertyTypes": ["DETACHED_HOUSE"],
                 "locationSearchCriteria": {
                     "classifiedLocationTerms": classified_location_terms
-                }
+                },
+                // TODO: Get 30 by page and move to next page if has more results.
+                "pagination": {
+                    "firstResult": 0,
+                    "maxResults": 80,
+                    "page": 1,
+                },
             }),
             None,
         )
