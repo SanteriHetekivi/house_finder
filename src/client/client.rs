@@ -50,10 +50,10 @@ impl Client {
     /// * `json` - Optional JSON data of the request to use as part of cache key.
     pub(self) async fn response_to_text(
         &self,
+        url: &std::primitive::str,
         response: reqwest::Response,
         json: std::option::Option<serde_json::Value>,
     ) -> std::result::Result<std::string::String, super::RequestError> {
-        let url: std::string::String = response.url().to_string();
         let text: std::string::String = response.text().await?;
         match self.cache.as_ref() {
             Some(cache) => {
@@ -131,8 +131,12 @@ impl Client {
             Some(text) => return Ok(text),
             None => {
                 return Ok(self
-                    .response_to_text(self.request(method, url, json, headers).await?, None)
-                    .await?)
+                    .response_to_text(
+                        url,
+                        self.request(method, url, json.clone(), headers).await?,
+                        json,
+                    )
+                    .await?);
             }
         }
     }
