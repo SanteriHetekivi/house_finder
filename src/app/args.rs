@@ -33,12 +33,16 @@ pub(crate) struct Args {
     pub(super) open_route_service_token: std::string::String,
 
     // Telegram bot token: https://core.telegram.org/bots#botfather
-    #[arg(long, help = "Telegram bot token.")]
-    pub(crate) telegram_bot_token: std::string::String,
+    #[arg(long, help = "Telegram bot token.", requires = "telegram_user_id")]
+    pub(crate) telegram_bot_token: Option<std::string::String>,
 
     // Send Telegram message to this user id: https://core.telegram.org/bots/api#user
-    #[arg(long, help = "Send Telegram message to this user id.")]
-    pub(crate) telegram_user_id: std::primitive::u64,
+    #[arg(
+        long,
+        help = "Send Telegram message to this user id.",
+        requires = "telegram_bot_token"
+    )]
+    pub(crate) telegram_user_id: Option<std::primitive::u64>,
 
     // Chache data that can be changed?
     #[arg(long, action, help = "Cache data that can be changed?")]

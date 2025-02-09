@@ -1,4 +1,5 @@
 /// Telegram Bot for sending messages.
+#[derive(Clone)]
 pub(crate) struct Telegram {
     bot: teloxide::prelude::Bot,
     user_id: teloxide::prelude::UserId,
