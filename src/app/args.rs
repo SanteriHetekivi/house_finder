@@ -5,6 +5,7 @@ pub(crate) struct Args {
     // Search criteria for publishing time.
     #[arg(
         long,
+        default_value="ANY_DAY",
         value_parser = clap::builder::PossibleValuesParser::new(
             ["ANY_DAY", "WITHIN_ONE_DAY", "WITHIN_TWO_DAYS", "WITHIN_SEVEN_DAYS", "WITHIN_TWO_WEEKS"]
         ),
