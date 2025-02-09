@@ -145,71 +145,48 @@ impl House {
         return Ok(true);
     }
 
-    /// Message about house.
+    /// Result for the house.
     ///
     /// # Arguments
     /// * `postal_code` - Postal code for the house.
-    pub(super) async fn message(
+    pub(super) async fn result(
         &mut self,
         postal_code: &std::primitive::str,
-    ) -> Result<std::string::String, crate::open_route_service::Error> {
-        let mut message: std::string::String = std::string::String::new();
-        message.push_str(&self.url);
-        message.push_str(":");
-
+    ) -> std::result::Result<super::Result, crate::open_route_service::Error> {
         let euros: std::option::Option<std::primitive::f64> = match self.euros {
-            Some(euros) => {
-                message.push_str("\n\tPrice: ");
-                message.push_str(&(euros / 1000).to_string());
-                message.push_str(" k€");
-                Some(euros as std::primitive::f64)
-            }
+            Some(euros) => Some(euros as std::primitive::f64),
             None => None,
         };
 
-        if let Some(square_meters_house) = self.square_meters_house {
-            message.push_str("\n\tArea (house): ");
-            message.push_str(&square_meters_house.floor().to_string());
-            message.push_str(" m²");
-
-            if let Some(euros) = euros {
-                message.push_str("\n\tPrice/Area (house): ");
-                message.push_str(&((euros / square_meters_house).ceil()).to_string());
-                message.push_str(" €/m²");
-            }
-        }
-
-        if let Some(square_meters_total) = self.square_meters_total {
-            message.push_str("\n\tArea (total): ");
-            message.push_str(&square_meters_total.floor().to_string());
-            message.push_str(" m²");
-
-            if let Some(euros) = euros {
-                message.push_str("\n\tPrice/Area (total): ");
-                message.push_str(&((euros / square_meters_total).ceil()).to_string());
-                message.push_str(" €/m²");
-            }
-        }
-
-        if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
-            message.push_str("\n\tBiking to location: ");
-            message.push_str(&biking_km_to_location.ceil().to_string());
-            message.push_str(" km");
-        }
-
-        if let Some(year) = self.year {
-            message.push_str("\n\tYear: ");
-            message.push_str(&year.to_string());
-        }
-
-        let internets: std::vec::Vec<super::Internet> = self.internets(postal_code).await?;
-        if !internets.is_empty() {
-            message.push_str("\n\tInternet:");
-            for internet in internets {
-                message.push_str("\n\t- ");
-                message.push_str(&internet.to_str());
-            }
-        }
-        Ok(message)
+        Ok(super::Result::new(
+            self.url.clone(),
+            match self.euros {
+                Some(euros) => Some(euros / 1000),
+                None => None,
+            },
+            self.square_meters_house,
+            match euros {
+                Some(euros) => match self.square_meters_house {
+                    Some(square_meters_house) => Some(euros / square_meters_house),
+                    None => None,
+                },
+                None => None,
+            },
+            self.square_meters_total,
+            match euros {
+                Some(euros) => match self.square_meters_total {
+                    Some(square_meters_total) => Some(euros / square_meters_total),
+                    None => None,
+                },
+                None => None,
+            },
+            match self.distance_to_location() {
+                Some(distance_to_location) => Some(distance_to_location.kilometers()),
+                None => None,
+            },
+            self.biking_km_to_location().await?,
+            self.year,
+            self.internets(postal_code).await?,
+        ))
     }
 }

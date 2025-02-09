@@ -145,9 +145,11 @@ pub(self) async fn etuovi_announcement(
         return Ok(false);
     }
 
-    let message: std::string::String = house
-        .message(&announcement.postal_code(cache).await?)
+    let result: super::Result = house
+        .result(&announcement.postal_code(cache).await?)
         .await?;
+
+    let message: std::string::String = result.message();
     if let Some(telegram) = &telegram {
         let _: teloxide::prelude::Message = telegram.send_message(&message).await?;
     }
