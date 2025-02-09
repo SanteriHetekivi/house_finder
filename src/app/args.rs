@@ -15,7 +15,7 @@ pub(crate) struct Args {
 
     // Maximum price.
     #[arg(long, help = "Max price in euros.")]
-    pub(super) price_max: std::primitive::u32,
+    pub(super) price_max: Option<std::primitive::u32>,
 
     // Cities.
     #[arg(long, help = "Cities.")]

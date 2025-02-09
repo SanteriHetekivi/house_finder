@@ -17,7 +17,6 @@ pub(crate) async fn run(
     let open_route_service_token: std::option::Option<std::string::String> =
         args.open_route_service_token.clone();
     let telegram: std::option::Option<crate::telegram::Telegram> = telegram.clone();
-    let price_max: std::primitive::u32 = args.price_max;
     let cities: std::vec::Vec<std::string::String> = args.cities.clone();
     handles.push(tokio::task::spawn(async move {
         etuovi(
@@ -26,7 +25,7 @@ pub(crate) async fn run(
             cache,
             open_route_service_token,
             telegram,
-            price_max,
+            args.price_max,
             cities,
         )
         .await
@@ -46,9 +45,9 @@ pub(crate) async fn run(
 /// * `publishing_time_search_criteria` - Search criteria for publishing time.
 /// * `cottage_location` - Cottage location.
 /// * `cache` - Cache data that can be changed?
-/// * `open_route_service_token` - OpenRouteService authorization token: https://openrouteservice.org/sign-up/
+/// * `open_route_service_token` - Optional OpenRouteService authorization token: https://openrouteservice.org/sign-up/
 /// * `telegram` - Optional Telegram bot.
-/// * `price_max` - Maximum price.
+/// * `price_max` - Optional maximum price.
 /// * `cities` - Cities.
 pub(self) async fn etuovi(
     publishing_time_search_criteria: &std::primitive::str,
@@ -56,7 +55,7 @@ pub(self) async fn etuovi(
     cache: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
     telegram: std::option::Option<crate::telegram::Telegram>,
-    price_max: std::primitive::u32,
+    price_max: std::option::Option<std::primitive::u32>,
     cities: std::vec::Vec<std::string::String>,
 ) -> std::result::Result<std::primitive::u128, super::Error> {
     let mut handles: std::vec::Vec<
@@ -65,7 +64,7 @@ pub(self) async fn etuovi(
         tokio::task::JoinHandle<std::result::Result<std::primitive::bool, super::Error>>,
     >::new();
     for announcement in
-        crate::etuovi::Etuovi::new(cache, publishing_time_search_criteria, price_max, cities)
+        crate::etuovi::Etuovi::new(cache, publishing_time_search_criteria, price_max, cities)?
             .announcements()
             .await?
             .iter()
