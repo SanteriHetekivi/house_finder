@@ -26,7 +26,14 @@ For example:
 - `--cities` - Cities to search for. Allows multiple.
 - `--cottage-latitude` - Latitude to summer cottage.
 - `--cottage-longitude` - Longitude to summer cottage.
-- `--open-route-service-token` - OpenRouteService authorization token: https://openrouteservice.org/sign-up/
+- `--open-route-service-token` - [OpenRouteService](https://openrouteservice.org/) authorization token: https://openrouteservice.org/sign-up/
 - `--telegram-bot-token` - Telegram bot token from [BotFather](https://telegram.me/BotFather).
 - `--telegram-user-id` - Your Telegram user ID.
-- `--cache` - (Optional) If given stores all of the request data to cache directory. (Even without this OpenRouteService biking distance is stored to cache, because it includes coordinates and should not change)
+- `--cache` - (Optional) If given stores all of the request data to cache directory in same directory as executable.
+
+## Info
+
+### Cache
+1. Writes cache to same directory executable is in.
+   - If run with `cargo run` directory will be created in `./target/debug/cache` directory.
+1. Even without `--cache` argument always caches [OpenRouteService](https://openrouteservice.org/) biking distance, because it includes coordinates and should not change.
