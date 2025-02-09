@@ -28,20 +28,16 @@ impl Etuovi {
         }
     }
 
-    /// Get announcements.
-    pub(crate) async fn announcements(
+    /// Get one page of announcements.
+    ///
+    /// # Arguments
+    /// * `classified_location_terms` - Classified location terms.
+    /// * `page` - Page number.
+    pub(super) async fn announcements_page(
         &self,
-    ) -> std::result::Result<std::vec::Vec<super::Announcement>, crate::client::JSONError> {
-        let classified_location_terms: Vec<_> = self
-            .cities
-            .iter()
-            .map(|city| {
-                serde_json::json!({
-                    "type": "CITY",
-                    "code": city
-                })
-            })
-            .collect();
+        classified_location_terms: std::vec::Vec<serde_json::Value>,
+        page: u16,
+    ) -> std::result::Result<super::Response, crate::client::JSONError> {
         Ok(crate::client::Client::new(
             if self.cache {
                 Some("etuovi/announcements/search/listpage")
@@ -63,16 +59,53 @@ impl Etuovi {
                 "locationSearchCriteria": {
                     "classifiedLocationTerms": classified_location_terms
                 },
-                // TODO: Get 30 by page and move to next page if has more results.
                 "pagination": {
-                    "firstResult": 0,
-                    "maxResults": 80,
-                    "page": 1,
+                    "firstResult": 30*(page-1),
+                    "maxResults": 30,
+                    "page": page,
                 },
             }),
             None,
         )
-        .await?
-        .announcements)
+        .await?)
+    }
+
+    /// Get announcements.
+    pub(crate) async fn announcements(
+        &self,
+    ) -> std::result::Result<std::vec::Vec<super::Announcement>, crate::client::JSONError> {
+        let mut announcements: std::vec::Vec<super::Announcement> = std::vec::Vec::new();
+        let classified_location_terms: std::vec::Vec<serde_json::Value> = self
+            .cities
+            .iter()
+            .map(|city| {
+                serde_json::json!({
+                    "type": "CITY",
+                    "code": city
+                })
+            })
+            .collect();
+        let mut page: std::primitive::u16 = 1;
+
+        // Loop every page.
+        loop {
+            println!("Page: {}", page);
+            let response: super::Response = self
+                .announcements_page(classified_location_terms.clone(), page)
+                .await?;
+            let mut added: std::primitive::bool = false;
+            for announcement in response.announcements {
+                announcements.push(announcement);
+                if !added {
+                    added = true;
+                }
+            }
+            if !added || response.count_of_all_results as usize <= announcements.len() {
+                break;
+            }
+            page += 1;
+        }
+
+        return Ok(announcements);
     }
 }
