@@ -94,7 +94,7 @@ impl Client {
         &self,
         url: &std::primitive::str,
     ) -> std::result::Result<reqwest::Response, reqwest::Error> {
-        self.client.get(url).send().await
+        self.client.get(url).send().await?.error_for_status()
     }
 
     /// Get text from the given URL.
@@ -167,7 +167,8 @@ impl Client {
             .header("Content-Type", "application/json")
             .json(&json)
             .send()
-            .await
+            .await?
+            .error_for_status()
     }
 
     /// Make POST request and get text.
