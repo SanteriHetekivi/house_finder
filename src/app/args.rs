@@ -30,7 +30,7 @@ pub(crate) struct Args {
 
     // OpenRouteService authorization token: https://openrouteservice.org/sign-up/
     #[arg(long, help = "OpenRouteService authorization token.")]
-    pub(super) open_route_service_token: std::string::String,
+    pub(super) open_route_service_token: Option<std::string::String>,
 
     // Telegram bot token: https://core.telegram.org/bots#botfather
     #[arg(long, help = "Telegram bot token.", requires = "telegram_user_id")]

@@ -14,7 +14,8 @@ pub(crate) async fn run(
     let cottage_location: longitude::Location =
         longitude::Location::from(args.cottage_latitude, args.cottage_longitude);
     let cache: std::primitive::bool = args.cache;
-    let open_route_service_token: std::string::String = args.open_route_service_token.clone();
+    let open_route_service_token: std::option::Option<std::string::String> =
+        args.open_route_service_token.clone();
     let telegram: std::option::Option<crate::telegram::Telegram> = telegram.clone();
     let price_max: std::primitive::u32 = args.price_max;
     let cities: std::vec::Vec<std::string::String> = args.cities.clone();
@@ -23,7 +24,7 @@ pub(crate) async fn run(
             &args.publishing_time_search_criteria,
             cottage_location,
             cache,
-            &open_route_service_token,
+            open_route_service_token,
             telegram,
             price_max,
             cities,
@@ -53,7 +54,7 @@ pub(self) async fn etuovi(
     publishing_time_search_criteria: &std::primitive::str,
     cottage_location: longitude::Location,
     cache: std::primitive::bool,
-    open_route_service_token: &std::primitive::str,
+    open_route_service_token: std::option::Option<std::string::String>,
     telegram: std::option::Option<crate::telegram::Telegram>,
     price_max: std::primitive::u32,
     cities: std::vec::Vec<std::string::String>,
@@ -71,14 +72,15 @@ pub(self) async fn etuovi(
     {
         let announcement: crate::etuovi::Announcement = announcement.clone();
         let cottage_location: longitude::Location = cottage_location.clone();
-        let open_route_service_token: std::string::String = open_route_service_token.to_string();
+        let open_route_service_token: std::option::Option<std::string::String> =
+            open_route_service_token.clone();
         let telegram: std::option::Option<crate::telegram::Telegram> = telegram.clone();
         handles.push(tokio::task::spawn(async move {
             etuovi_announcement(
                 announcement,
                 cottage_location,
                 cache,
-                &open_route_service_token,
+                open_route_service_token,
                 telegram,
             )
             .await
@@ -107,7 +109,7 @@ pub(self) async fn etuovi_announcement(
     announcement: crate::etuovi::Announcement,
     cottage_location: longitude::Location,
     cache: std::primitive::bool,
-    open_route_service_token: &std::primitive::str,
+    open_route_service_token: std::option::Option<std::string::String>,
     telegram: std::option::Option<crate::telegram::Telegram>,
 ) -> std::result::Result<std::primitive::bool, super::Error> {
     let mut house: crate::app::house::House = crate::app::House::new(

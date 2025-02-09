@@ -1,14 +1,14 @@
 /// House to buy.
 pub(crate) struct House {
     pub(self) url: std::string::String,
-    pub(self) location: longitude::Location,
+    pub(self) location: std::option::Option<longitude::Location>,
     pub(self) square_meters_house: std::primitive::f64,
     pub(self) square_meters_total: std::option::Option<std::primitive::f64>,
     pub(self) euros: std::primitive::u32,
     pub(self) street_address: std::string::String,
     pub(self) year: std::option::Option<std::primitive::u16>,
     pub(self) cottage_location: longitude::Location,
-    pub(self) open_route_service_token: std::string::String,
+    pub(self) open_route_service_token: std::option::Option<std::string::String>,
     pub(self) cache: std::primitive::bool,
     pub(self) biking_km_to_cottage: std::option::Option<std::primitive::f64>,
 }
@@ -29,14 +29,14 @@ impl House {
     /// * `cache` - Use cache?
     pub(super) fn new(
         url: &std::primitive::str,
-        location: longitude::Location,
+        location: std::option::Option<longitude::Location>,
         square_meters_house: std::primitive::f64,
         square_meters_total: std::option::Option<std::primitive::f64>,
         euros: std::primitive::u32,
         street_address: &std::primitive::str,
         year: std::option::Option<std::primitive::u16>,
         cottage_location: longitude::Location,
-        open_route_service_token: &std::primitive::str,
+        open_route_service_token: std::option::Option<std::string::String>,
         cache: std::primitive::bool,
     ) -> Self {
         Self {
@@ -48,15 +48,18 @@ impl House {
             street_address: street_address.to_string(),
             year,
             cottage_location,
-            open_route_service_token: open_route_service_token.to_string(),
+            open_route_service_token,
             cache,
             biking_km_to_cottage: None,
         }
     }
 
     /// Distance to cottage directly.
-    pub(self) fn distance_to_cottage(&self) -> longitude::Distance {
-        self.location.distance(&self.cottage_location)
+    pub(self) fn distance_to_cottage(&self) -> std::option::Option<longitude::Distance> {
+        if let Some(location) = &self.location {
+            return Some(location.distance(&self.cottage_location));
+        }
+        return None;
     }
 
     /// Internet products that meet my requirements.
@@ -87,24 +90,42 @@ impl House {
     /// Biking distance in kilometers to cottage.
     pub(self) async fn biking_km_to_cottage(
         &mut self,
-    ) -> std::result::Result<std::primitive::f64, crate::open_route_service::Error> {
+    ) -> std::result::Result<
+        std::option::Option<std::primitive::f64>,
+        crate::open_route_service::Error,
+    > {
         if self.biking_km_to_cottage.is_none() {
-            self.biking_km_to_cottage = Some(
-                crate::open_route_service::OpenRouteService::new(&self.open_route_service_token)?
-                    .biking_km(self.location.clone(), self.cottage_location.clone())
-                    .await?,
-            );
+            if let Some(open_route_service_token) = &self.open_route_service_token {
+                if let Some(location) = &self.location {
+                    self.biking_km_to_cottage = Some(
+                        crate::open_route_service::OpenRouteService::new(open_route_service_token)?
+                            .biking_km(location.clone(), self.cottage_location.clone())
+                            .await?,
+                    );
+                }
+            }
         }
-        return Ok(self.biking_km_to_cottage.unwrap());
+        return Ok(self.biking_km_to_cottage);
     }
 
     /// Include house as one of the options?
     pub(super) async fn include(
         &mut self,
     ) -> std::result::Result<std::primitive::bool, crate::open_route_service::Error> {
-        Ok(40.00 <= self.square_meters_house
-            && self.distance_to_cottage().kilometers() <= 35.0
-            && self.biking_km_to_cottage().await? <= 35.0)
+        if self.square_meters_house < 40.0 {
+            return Ok(false);
+        }
+        if let Some(distance_to_cottage) = self.distance_to_cottage() {
+            if 35.0 < distance_to_cottage.kilometers() {
+                return Ok(false);
+            }
+        }
+        if let Some(biking_km_to_cottage) = self.biking_km_to_cottage().await? {
+            if 35.0 < biking_km_to_cottage {
+                return Ok(false);
+            }
+        }
+        return Ok(true);
     }
 
     /// Message about house.
@@ -132,29 +153,25 @@ impl House {
         message.push_str(&((euros / self.square_meters_house).ceil()).to_string());
         message.push_str(" €/m²");
 
-        match self.square_meters_total {
-            Some(square_meters_total) => {
-                message.push_str("\n\tArea (total): ");
-                message.push_str(&square_meters_total.floor().to_string());
-                message.push_str(" m²");
+        if let Some(square_meters_total) = self.square_meters_total {
+            message.push_str("\n\tArea (total): ");
+            message.push_str(&square_meters_total.floor().to_string());
+            message.push_str(" m²");
 
-                message.push_str("\n\tPrice/Area (total): ");
-                message.push_str(&((euros / square_meters_total).ceil()).to_string());
-                message.push_str(" €/m²");
-            }
-            None => {}
+            message.push_str("\n\tPrice/Area (total): ");
+            message.push_str(&((euros / square_meters_total).ceil()).to_string());
+            message.push_str(" €/m²");
         }
 
-        message.push_str("\n\tBiking from cottage: ");
-        message.push_str(&self.biking_km_to_cottage().await?.ceil().to_string());
-        message.push_str(" km");
+        if let Some(biking_km_to_cottage) = self.biking_km_to_cottage().await? {
+            message.push_str("\n\tBiking to cottage: ");
+            message.push_str(&biking_km_to_cottage.ceil().to_string());
+            message.push_str(" km");
+        }
 
-        match self.year {
-            Some(year) => {
-                message.push_str("\n\tYear: ");
-                message.push_str(&year.to_string());
-            }
-            None => {}
+        if let Some(year) = self.year {
+            message.push_str("\n\tYear: ");
+            message.push_str(&year.to_string());
         }
 
         let internets: std::vec::Vec<super::Internet> = self.internets(postal_code).await?;

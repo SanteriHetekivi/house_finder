@@ -3,8 +3,8 @@
 pub(crate) struct Announcement {
     pub(self) friendly_id: std::string::String,
     pub(self) address_line1: std::string::String,
-    pub(self) latitude: std::primitive::f64,
-    pub(self) longitude: std::primitive::f64,
+    pub(self) latitude: std::option::Option<std::primitive::f64>,
+    pub(self) longitude: std::option::Option<std::primitive::f64>,
     pub(self) construction_finished_year: std::option::Option<std::primitive::u16>,
     pub(self) search_price: std::primitive::u32,
     pub(self) area: std::primitive::f64,
@@ -18,8 +18,13 @@ impl Announcement {
     }
 
     /// Location for the house.
-    pub(crate) fn location(&self) -> longitude::Location {
-        longitude::Location::from(self.latitude, self.longitude)
+    pub(crate) fn location(&self) -> std::option::Option<longitude::Location> {
+        if let Some(latitude) = self.latitude {
+            if let Some(longitude) = self.longitude {
+                return Some(longitude::Location::from(latitude, longitude));
+            }
+        }
+        return None;
     }
 
     /// Square meters for the house.

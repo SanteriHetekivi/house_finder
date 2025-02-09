@@ -26,7 +26,7 @@ For example:
 - `--cities` - Cities to search for. Allows multiple.
 - `--cottage-latitude` - Latitude to summer cottage.
 - `--cottage-longitude` - Longitude to summer cottage.
-- `--open-route-service-token` - [OpenRouteService](https://openrouteservice.org/) authorization token: https://openrouteservice.org/sign-up/
+- `--open-route-service-token` - (Optional) [OpenRouteService](https://openrouteservice.org/) authorization token: https://openrouteservice.org/sign-up/
 - `--telegram-bot-token` - (Optional) (Requires: --telegram-user-id) Telegram bot token from [BotFather](https://telegram.me/BotFather).
 - `--telegram-user-id` - (Optional) (Requires: --telegram-bot-token) Your Telegram user ID.
 - `--cache` - (Optional) If given stores all of the request data to cache directory in same directory as executable.
