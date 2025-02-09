@@ -23,7 +23,7 @@ For example:
 ## Arguments
 - `--publishing-time-search-criteria` - (Optional) (Default: ANY_DAY) Search criteria for publishing time. One of: ANY_DAY, WITHIN_ONE_DAY, WITHIN_TWO_DAYS, WITHIN_SEVEN_DAYS or WITHIN_TWO_WEEKS
 - `--price_max` - (Optional) Max price in euros.
-- `--cities` - Cities to search for. Allows multiple.
+- `--cities` - (Optional) Cities to search for. Allows multiple.
 - `--cottage-latitude` - Latitude to summer cottage.
 - `--cottage-longitude` - Longitude to summer cottage.
 - `--open-route-service-token` - (Optional) [OpenRouteService](https://openrouteservice.org/) authorization token: https://openrouteservice.org/sign-up/
