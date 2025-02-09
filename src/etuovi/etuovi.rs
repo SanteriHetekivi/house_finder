@@ -42,11 +42,15 @@ impl Etuovi {
                 })
             })
             .collect();
-        Ok(crate::client::Client::new(if self.cache {
-            Some("etuovi/announcements/search/listpage")
-        } else {
-            None
-        })?
+        Ok(crate::client::Client::new(
+            if self.cache {
+                Some("etuovi/announcements/search/listpage")
+            } else {
+                None
+            },
+            1000,
+            None,
+        )?
         .post_json::<super::Response>(
             "https://www.etuovi.com/api/v2/announcements/search/listpage",
             serde_json::json!({

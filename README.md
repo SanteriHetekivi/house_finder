@@ -37,3 +37,14 @@ For example:
 1. Writes cache to same directory executable is in.
    - If run with `cargo run` directory will be created in `./target/debug/cache` directory.
 1. Even without `--cache` argument always caches [OpenRouteService](https://openrouteservice.org/) biking distance, because it includes coordinates and should not change.
+
+### Rate limit
+Requests are rate limited.
+Rate limits are second- and top-domain specific.
+So for example if I made the call to www.google.com program would rate limit it together with all the google.com requests.
+
+#### OpenRouteServices
+Request to [OpenRouteService](https://openrouteservice.org/) are only rate limited by 40 calls per minute.
+
+#### Every other service
+Requests to every other service are rate limited to once per second.

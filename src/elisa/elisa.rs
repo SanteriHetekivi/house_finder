@@ -10,22 +10,30 @@ impl Elisa {
         cache: std::primitive::bool,
     ) -> std::result::Result<Self, crate::client::JSONError> {
         let mut products: std::vec::Vec<super::Product> = std::vec::Vec::<super::Product>::new();
-        for address in crate::client::Client::new(if cache {
-            Some("elisa/address/search")
-        } else {
-            None
-        })?
+        for address in crate::client::Client::new(
+            if cache {
+                Some("elisa/address/search")
+            } else {
+                None
+            },
+            1000,
+            None,
+        )?
         .get_json::<std::vec::Vec<super::Address>>(&format!(
             "https://elisa.fi/kauppa/rest/address/search/{}/{}",
             postal_code, street_address
         ))
         .await?
         {
-            for product in crate::client::Client::new(if cache {
-                Some("elisa/products/fixedBroadbandProducts")
-            } else {
-                None
-            })?
+            for product in crate::client::Client::new(
+                if cache {
+                    Some("elisa/products/fixedBroadbandProducts")
+                } else {
+                    None
+                },
+                1000,
+                None,
+            )?
             .get_json::<super::Response>(&format!(
                 "https://elisa.fi/kauppa/rest/products/fixedBroadbandProducts/{}/{}",
                 postal_code, address.address_id

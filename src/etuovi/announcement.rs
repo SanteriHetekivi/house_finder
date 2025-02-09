@@ -50,7 +50,7 @@ impl Announcement {
         &self,
         cache: std::primitive::bool,
     ) -> std::result::Result<std::string::String, crate::client::RegexError> {
-        crate::client::Client::new(if cache { Some("etuovi/kohde") } else { None })?
+        crate::client::Client::new(if cache { Some("etuovi/kohde") } else { None }, 1000, None)?
             .get_regex(&self.url(), r#""postCode":"([0-9]{5})""#)
             .await
     }

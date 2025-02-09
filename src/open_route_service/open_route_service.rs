@@ -29,33 +29,36 @@ impl OpenRouteService {
         from: longitude::Location,
         to: longitude::Location,
     ) -> std::result::Result<std::primitive::f64, crate::client::JSONError> {
-        Ok(
+        Ok(crate::client::Client::new(
             // Always caching cycling directions, because the API is rate limited and they should not change.
-            crate::client::Client::new(Some("open_route_service/directions/cycling-regular"))?
-                .post_json::<super::Response>(
-                    "https://api.openrouteservice.org/v2/directions/cycling-regular/json",
-                    serde_json::json!(
-                        {
-                            "coordinates": [
-                                [from.longitude, from.latitude],
-                                [to.longitude, to.latitude]
-                            ],
-                            "preference": "recommended",
-                            "language": "en",
-                            "units": "km",
-                            // Do not include any additional information in the response.
-                            "instructions": false,
-                            "maneuvers": false,
-                            "geometry": false,
-                            "elevation": false,
-                        }
-                    ),
-                    Some(self.headers.clone()),
-                )
-                .await?
-                .routes[0]
-                .summary
-                .distance,
+            Some("open_route_service/directions/cycling-regular"),
+            0,
+            // OpenRouteServices has a rate limit of 40 requests per minute for free users.
+            Some(40),
+        )?
+        .post_json::<super::Response>(
+            "https://api.openrouteservice.org/v2/directions/cycling-regular/json",
+            serde_json::json!(
+                {
+                    "coordinates": [
+                        [from.longitude, from.latitude],
+                        [to.longitude, to.latitude]
+                    ],
+                    "preference": "recommended",
+                    "language": "en",
+                    "units": "km",
+                    // Do not include any additional information in the response.
+                    "instructions": false,
+                    "maneuvers": false,
+                    "geometry": false,
+                    "elevation": false,
+                }
+            ),
+            Some(self.headers.clone()),
         )
+        .await?
+        .routes[0]
+            .summary
+            .distance)
     }
 }
