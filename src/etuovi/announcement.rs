@@ -6,7 +6,7 @@ pub(crate) struct Announcement {
     pub(self) latitude: std::option::Option<std::primitive::f64>,
     pub(self) longitude: std::option::Option<std::primitive::f64>,
     pub(self) construction_finished_year: std::option::Option<std::primitive::u16>,
-    pub(self) search_price: std::primitive::u32,
+    pub(self) search_price: std::option::Option<std::primitive::u32>,
     pub(self) area: std::option::Option<std::primitive::f64>,
     pub(self) total_area: std::option::Option<std::primitive::f64>,
 }
@@ -38,7 +38,7 @@ impl Announcement {
     }
 
     /// Price in euros.
-    pub(crate) fn euros(&self) -> std::primitive::u32 {
+    pub(crate) fn euros(&self) -> std::option::Option<std::primitive::u32> {
         self.search_price
     }
 

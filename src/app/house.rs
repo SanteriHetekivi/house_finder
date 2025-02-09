@@ -4,7 +4,7 @@ pub(crate) struct House {
     pub(self) location_house: std::option::Option<longitude::Location>,
     pub(self) square_meters_house: std::option::Option<std::primitive::f64>,
     pub(self) square_meters_total: std::option::Option<std::primitive::f64>,
-    pub(self) euros: std::primitive::u32,
+    pub(self) euros: std::option::Option<std::primitive::u32>,
     pub(self) street_address: std::string::String,
     pub(self) year: std::option::Option<std::primitive::u16>,
     pub(self) location_comparison: std::option::Option<longitude::Location>,
@@ -32,7 +32,7 @@ impl House {
         location_house: std::option::Option<longitude::Location>,
         square_meters_house: std::option::Option<std::primitive::f64>,
         square_meters_total: std::option::Option<std::primitive::f64>,
-        euros: std::primitive::u32,
+        euros: std::option::Option<std::primitive::u32>,
         street_address: &std::primitive::str,
         year: std::option::Option<std::primitive::u16>,
         location_comparison: std::option::Option<longitude::Location>,
@@ -157,20 +157,26 @@ impl House {
         message.push_str(&self.url);
         message.push_str(":");
 
-        message.push_str("\n\tPrice: ");
-        message.push_str(&(self.euros / 1000).to_string());
-        message.push_str(" k€");
-
-        let euros: std::primitive::f64 = self.euros as std::primitive::f64;
+        let euros: std::option::Option<std::primitive::f64> = match self.euros {
+            Some(euros) => {
+                message.push_str("\n\tPrice: ");
+                message.push_str(&(euros / 1000).to_string());
+                message.push_str(" k€");
+                Some(euros as std::primitive::f64)
+            }
+            None => None,
+        };
 
         if let Some(square_meters_house) = self.square_meters_house {
             message.push_str("\n\tArea (house): ");
             message.push_str(&square_meters_house.floor().to_string());
             message.push_str(" m²");
 
-            message.push_str("\n\tPrice/Area (house): ");
-            message.push_str(&((euros / square_meters_house).ceil()).to_string());
-            message.push_str(" €/m²");
+            if let Some(euros) = euros {
+                message.push_str("\n\tPrice/Area (house): ");
+                message.push_str(&((euros / square_meters_house).ceil()).to_string());
+                message.push_str(" €/m²");
+            }
         }
 
         if let Some(square_meters_total) = self.square_meters_total {
@@ -178,9 +184,11 @@ impl House {
             message.push_str(&square_meters_total.floor().to_string());
             message.push_str(" m²");
 
-            message.push_str("\n\tPrice/Area (total): ");
-            message.push_str(&((euros / square_meters_total).ceil()).to_string());
-            message.push_str(" €/m²");
+            if let Some(euros) = euros {
+                message.push_str("\n\tPrice/Area (total): ");
+                message.push_str(&((euros / square_meters_total).ceil()).to_string());
+                message.push_str(" €/m²");
+            }
         }
 
         if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
