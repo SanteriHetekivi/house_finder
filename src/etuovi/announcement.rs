@@ -7,7 +7,7 @@ pub(crate) struct Announcement {
     pub(self) longitude: std::option::Option<std::primitive::f64>,
     pub(self) construction_finished_year: std::option::Option<std::primitive::u16>,
     pub(self) search_price: std::primitive::u32,
-    pub(self) area: std::primitive::f64,
+    pub(self) area: std::option::Option<std::primitive::f64>,
     pub(self) total_area: std::option::Option<std::primitive::f64>,
 }
 
@@ -28,7 +28,7 @@ impl Announcement {
     }
 
     /// Square meters for the house.
-    pub(crate) fn square_meters_house(&self) -> std::primitive::f64 {
+    pub(crate) fn square_meters_house(&self) -> std::option::Option<std::primitive::f64> {
         self.area
     }
 

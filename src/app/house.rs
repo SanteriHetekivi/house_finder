@@ -2,7 +2,7 @@
 pub(crate) struct House {
     pub(self) url: std::string::String,
     pub(self) location: std::option::Option<longitude::Location>,
-    pub(self) square_meters_house: std::primitive::f64,
+    pub(self) square_meters_house: std::option::Option<std::primitive::f64>,
     pub(self) square_meters_total: std::option::Option<std::primitive::f64>,
     pub(self) euros: std::primitive::u32,
     pub(self) street_address: std::string::String,
@@ -18,8 +18,8 @@ impl House {
     ///
     /// # Arguments
     /// * `url` - URL for the house.
-    /// * `location` - Location for the house.
-    /// * `square_meters_house` - Square meters for the house.
+    /// * `location` - Optional location for the house.
+    /// * `square_meters_house` - Optional square meters for the house.
     /// * `square_meters_total` - Optional total square meters for the whole property.
     /// * `euros` - Price in euros.
     /// * `street_address` - Street address.
@@ -30,7 +30,7 @@ impl House {
     pub(super) fn new(
         url: &std::primitive::str,
         location: std::option::Option<longitude::Location>,
-        square_meters_house: std::primitive::f64,
+        square_meters_house: std::option::Option<std::primitive::f64>,
         square_meters_total: std::option::Option<std::primitive::f64>,
         euros: std::primitive::u32,
         street_address: &std::primitive::str,
@@ -112,9 +112,18 @@ impl House {
     pub(super) async fn include(
         &mut self,
     ) -> std::result::Result<std::primitive::bool, crate::open_route_service::Error> {
-        if self.square_meters_house < 40.0 {
-            return Ok(false);
+        // Check area.
+        if let Some(square_meters_house) = self.square_meters_house {
+            if square_meters_house < 40.0 {
+                return Ok(false);
+            }
+        } else if let Some(square_meters_total) = self.square_meters_total {
+            if square_meters_total < 40.0 {
+                return Ok(false);
+            }
         }
+
+        // Check distance.
         if let Some(distance_to_cottage) = self.distance_to_cottage() {
             if 35.0 < distance_to_cottage.kilometers() {
                 return Ok(false);
@@ -125,6 +134,7 @@ impl House {
                 return Ok(false);
             }
         }
+
         return Ok(true);
     }
 
@@ -145,13 +155,16 @@ impl House {
         message.push_str(" k€");
 
         let euros: std::primitive::f64 = self.euros as std::primitive::f64;
-        message.push_str("\n\tArea (house): ");
-        message.push_str(&self.square_meters_house.floor().to_string());
-        message.push_str(" m²");
 
-        message.push_str("\n\tPrice/Area (house): ");
-        message.push_str(&((euros / self.square_meters_house).ceil()).to_string());
-        message.push_str(" €/m²");
+        if let Some(square_meters_house) = self.square_meters_house {
+            message.push_str("\n\tArea (house): ");
+            message.push_str(&square_meters_house.floor().to_string());
+            message.push_str(" m²");
+
+            message.push_str("\n\tPrice/Area (house): ");
+            message.push_str(&((euros / square_meters_house).ceil()).to_string());
+            message.push_str(" €/m²");
+        }
 
         if let Some(square_meters_total) = self.square_meters_total {
             message.push_str("\n\tArea (total): ");
