@@ -1,16 +1,16 @@
 /// House to buy.
 pub(crate) struct House {
     pub(self) url: std::string::String,
-    pub(self) location: std::option::Option<longitude::Location>,
+    pub(self) location_house: std::option::Option<longitude::Location>,
     pub(self) square_meters_house: std::option::Option<std::primitive::f64>,
     pub(self) square_meters_total: std::option::Option<std::primitive::f64>,
     pub(self) euros: std::primitive::u32,
     pub(self) street_address: std::string::String,
     pub(self) year: std::option::Option<std::primitive::u16>,
-    pub(self) cottage_location: longitude::Location,
+    pub(self) location_comparison: std::option::Option<longitude::Location>,
     pub(self) open_route_service_token: std::option::Option<std::string::String>,
     pub(self) cache: std::primitive::bool,
-    pub(self) biking_km_to_cottage: std::option::Option<std::primitive::f64>,
+    pub(self) biking_km_to_location: std::option::Option<std::primitive::f64>,
 }
 
 impl House {
@@ -24,41 +24,44 @@ impl House {
     /// * `euros` - Price in euros.
     /// * `street_address` - Street address.
     /// * `year` - Optional construction year.
-    /// * `cottage_location` - Location for the cottage.
+    /// * `location_comparison` - Location for the location.
     /// * `open_route_service_token` - Open Route Service key.
     /// * `cache` - Use cache?
     pub(super) fn new(
         url: &std::primitive::str,
-        location: std::option::Option<longitude::Location>,
+        location_house: std::option::Option<longitude::Location>,
         square_meters_house: std::option::Option<std::primitive::f64>,
         square_meters_total: std::option::Option<std::primitive::f64>,
         euros: std::primitive::u32,
         street_address: &std::primitive::str,
         year: std::option::Option<std::primitive::u16>,
-        cottage_location: longitude::Location,
+        location_comparison: std::option::Option<longitude::Location>,
         open_route_service_token: std::option::Option<std::string::String>,
         cache: std::primitive::bool,
     ) -> Self {
         Self {
             url: url.to_string(),
-            location,
+            location_house,
             square_meters_house,
             square_meters_total,
             euros,
             street_address: street_address.to_string(),
             year,
-            cottage_location,
+            location_comparison,
             open_route_service_token,
             cache,
-            biking_km_to_cottage: None,
+            biking_km_to_location: None,
         }
     }
 
-    /// Distance to cottage directly.
-    pub(self) fn distance_to_cottage(&self) -> std::option::Option<longitude::Distance> {
-        if let Some(location) = &self.location {
-            return Some(location.distance(&self.cottage_location));
+    /// Distance to location directly.
+    pub(self) fn distance_to_location(&self) -> std::option::Option<longitude::Distance> {
+        if let Some(location_comparison) = &self.location_comparison {
+            if let Some(location_house) = &self.location_house {
+                return Some(location_house.distance(location_comparison));
+            }
         }
+
         return None;
     }
 
@@ -87,25 +90,29 @@ impl House {
         return Ok(internets);
     }
 
-    /// Biking distance in kilometers to cottage.
-    pub(self) async fn biking_km_to_cottage(
+    /// Biking distance in kilometers to location.
+    pub(self) async fn biking_km_to_location(
         &mut self,
     ) -> std::result::Result<
         std::option::Option<std::primitive::f64>,
         crate::open_route_service::Error,
     > {
-        if self.biking_km_to_cottage.is_none() {
-            if let Some(open_route_service_token) = &self.open_route_service_token {
-                if let Some(location) = &self.location {
-                    self.biking_km_to_cottage = Some(
-                        crate::open_route_service::OpenRouteService::new(open_route_service_token)?
-                            .biking_km(location.clone(), self.cottage_location.clone())
+        if self.biking_km_to_location.is_none() {
+            if let Some(location_comparison) = &self.location_comparison {
+                if let Some(open_route_service_token) = &self.open_route_service_token {
+                    if let Some(location) = &self.location_house {
+                        self.biking_km_to_location = Some(
+                            crate::open_route_service::OpenRouteService::new(
+                                open_route_service_token,
+                            )?
+                            .biking_km(location.clone(), location_comparison.clone())
                             .await?,
-                    );
+                        );
+                    }
                 }
             }
         }
-        return Ok(self.biking_km_to_cottage);
+        return Ok(self.biking_km_to_location);
     }
 
     /// Include house as one of the options?
@@ -124,13 +131,13 @@ impl House {
         }
 
         // Check distance.
-        if let Some(distance_to_cottage) = self.distance_to_cottage() {
-            if 35.0 < distance_to_cottage.kilometers() {
+        if let Some(distance_to_location) = self.distance_to_location() {
+            if 35.0 < distance_to_location.kilometers() {
                 return Ok(false);
             }
         }
-        if let Some(biking_km_to_cottage) = self.biking_km_to_cottage().await? {
-            if 35.0 < biking_km_to_cottage {
+        if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
+            if 35.0 < biking_km_to_location {
                 return Ok(false);
             }
         }
@@ -176,9 +183,9 @@ impl House {
             message.push_str(" €/m²");
         }
 
-        if let Some(biking_km_to_cottage) = self.biking_km_to_cottage().await? {
-            message.push_str("\n\tBiking to cottage: ");
-            message.push_str(&biking_km_to_cottage.ceil().to_string());
+        if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
+            message.push_str("\n\tBiking to location: ");
+            message.push_str(&biking_km_to_location.ceil().to_string());
             message.push_str(" km");
         }
 

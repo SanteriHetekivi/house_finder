@@ -13,8 +13,8 @@ For example:
   --price_max=1000000 \
   --cities=FI_UUSIMAA_ESPOO \
   --cities=FI_UUSIMAA_HELSINKI \
-  --cottage-latitude=<COTTAGE-LATITUDE> \
-  --cottage-longitude=<COTTAGE-LONGITUDE> \
+  --location-latitude=<LOCATION-LATITUDE> \
+  --location-longitude=<LOCATION-LONGITUDE> \
   --open-route-service-token '<OPEN-ROUTE-SERVICE-AUTHORIZATION-TOKEN>' \
   --telegram-bot-token '<TELEGRAM-BOT-TOKEN>' \
   --telegram-user-id <TELEGRAM-USER-ID>
@@ -24,8 +24,8 @@ For example:
 - `--publishing-time-search-criteria` - (Optional) (Default: ANY_DAY) Search criteria for publishing time. One of: ANY_DAY, WITHIN_ONE_DAY, WITHIN_TWO_DAYS, WITHIN_SEVEN_DAYS or WITHIN_TWO_WEEKS
 - `--price_max` - (Optional) Max price in euros.
 - `--cities` - (Optional) Cities to search for. Allows multiple.
-- `--cottage-latitude` - Latitude to summer cottage.
-- `--cottage-longitude` - Longitude to summer cottage.
+- `--location-latitude` - (Optional) (Requires: --location-longitude) Latitude to calculate distance against.
+- `--location-longitude` - (Optional) (Requires: --location-latitude) Longitude to calculate distance against.
 - `--open-route-service-token` - (Optional) [OpenRouteService](https://openrouteservice.org/) authorization token: https://openrouteservice.org/sign-up/
 - `--telegram-bot-token` - (Optional) (Requires: --telegram-user-id) Telegram bot token from [BotFather](https://telegram.me/BotFather).
 - `--telegram-user-id` - (Optional) (Requires: --telegram-bot-token) Your Telegram user ID.

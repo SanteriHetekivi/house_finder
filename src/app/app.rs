@@ -11,8 +11,24 @@ pub(crate) async fn run(
     > = std::vec::Vec::<
         tokio::task::JoinHandle<std::result::Result<std::primitive::u128, super::Error>>,
     >::new();
-    let cottage_location: longitude::Location =
-        longitude::Location::from(args.cottage_latitude, args.cottage_longitude);
+    let location_comparison: std::option::Option<longitude::Location> =
+        match args.location_latitude.clone() {
+            Some(location_latitude) => match args.location_longitude.clone() {
+                Some(location_longitude) => Some(longitude::Location::from(
+                    location_latitude,
+                    location_longitude,
+                )),
+                // Should not happen if clap is configured and working correctly.
+                None => std::panic!("--location-latitude was given but not --location-longitude!"),
+            },
+            None => {
+                if args.telegram_user_id.is_some() {
+                    // Should not happen if clap is configured and working correctly.
+                    std::panic!("--location-longitude was given but not --location-latitude!");
+                }
+                None
+            }
+        };
     let cache: std::primitive::bool = args.cache;
     let open_route_service_token: std::option::Option<std::string::String> =
         args.open_route_service_token.clone();
@@ -21,7 +37,7 @@ pub(crate) async fn run(
     handles.push(tokio::task::spawn(async move {
         etuovi(
             &args.publishing_time_search_criteria,
-            cottage_location,
+            location_comparison,
             cache,
             open_route_service_token,
             telegram,
@@ -43,7 +59,7 @@ pub(crate) async fn run(
 ///
 /// # Arguments
 /// * `publishing_time_search_criteria` - Search criteria for publishing time.
-/// * `cottage_location` - Cottage location.
+/// * `location_comparison` - Optional location to compare against.
 /// * `cache` - Cache data that can be changed?
 /// * `open_route_service_token` - Optional OpenRouteService authorization token: https://openrouteservice.org/sign-up/
 /// * `telegram` - Optional Telegram bot.
@@ -51,7 +67,7 @@ pub(crate) async fn run(
 /// * `cities` - Cities.
 pub(self) async fn etuovi(
     publishing_time_search_criteria: &std::primitive::str,
-    cottage_location: longitude::Location,
+    location_comparison: std::option::Option<longitude::Location>,
     cache: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
     telegram: std::option::Option<crate::telegram::Telegram>,
@@ -70,14 +86,15 @@ pub(self) async fn etuovi(
             .iter()
     {
         let announcement: crate::etuovi::Announcement = announcement.clone();
-        let cottage_location: longitude::Location = cottage_location.clone();
+        let location_comparison: std::option::Option<longitude::Location> =
+            location_comparison.clone();
         let open_route_service_token: std::option::Option<std::string::String> =
             open_route_service_token.clone();
         let telegram: std::option::Option<crate::telegram::Telegram> = telegram.clone();
         handles.push(tokio::task::spawn(async move {
             etuovi_announcement(
                 announcement,
-                cottage_location,
+                location_comparison,
                 cache,
                 open_route_service_token,
                 telegram,
@@ -100,13 +117,13 @@ pub(self) async fn etuovi(
 ///
 /// # Arguments
 /// * `announcement` - Etuovi announcement.
-/// * `cottage_location` - Cottage location.
+/// * `location_comparison` - Optional location_comparison to compare against.
 /// * `cache` - Cache data that can be changed?
 /// * `open_route_service_token` - OpenRouteService authorization token: https://openrouteservice.org/sign-up/
 /// * `telegram` - Optional Telegram bot.
 pub(self) async fn etuovi_announcement(
     announcement: crate::etuovi::Announcement,
-    cottage_location: longitude::Location,
+    location_comparison: std::option::Option<longitude::Location>,
     cache: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
     telegram: std::option::Option<crate::telegram::Telegram>,
@@ -119,7 +136,7 @@ pub(self) async fn etuovi_announcement(
         announcement.euros(),
         &announcement.street_address(),
         announcement.year(),
-        cottage_location.clone(),
+        location_comparison.clone(),
         open_route_service_token,
         cache,
     );

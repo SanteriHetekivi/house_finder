@@ -21,13 +21,13 @@ pub(crate) struct Args {
     #[arg(long, help = "Cities.")]
     pub(super) cities: Vec<std::string::String>,
 
-    // Cottage latitude.
-    #[arg(long, help = "Cottage latitude.")]
-    pub(super) cottage_latitude: std::primitive::f64,
+    // Location latitude.
+    #[arg(long, help = "Location latitude.", requires = "location_longitude")]
+    pub(super) location_latitude: Option<std::primitive::f64>,
 
-    // Cottage longitude.
-    #[arg(long, help = "Cottage longitude.")]
-    pub(super) cottage_longitude: std::primitive::f64,
+    // Location longitude.
+    #[arg(long, help = "Location longitude.", requires = "location_latitude")]
+    pub(super) location_longitude: Option<std::primitive::f64>,
 
     // OpenRouteService authorization token: https://openrouteservice.org/sign-up/
     #[arg(long, help = "OpenRouteService authorization token.")]
