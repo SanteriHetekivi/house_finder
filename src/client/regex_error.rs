@@ -4,7 +4,7 @@ pub(crate) enum RegexError {
     RegexError(regex::Error),
 }
 impl std::fmt::Display for RegexError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             RegexError::RequestError(e) => write!(f, "Request or IO error:\n{}", e),
             RegexError::RegexError(e) => write!(f, "Regex error:\n{}", e),

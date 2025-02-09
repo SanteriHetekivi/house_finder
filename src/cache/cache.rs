@@ -15,7 +15,7 @@ impl Cache {
         ext: &std::primitive::str,
     ) -> std::result::Result<Self, std::io::Error> {
         let mut exe_dir: std::path::PathBuf = std::env::current_exe()?;
-        exe_dir.pop(); // Remove the executable name to get the directory
+        let _: bool = exe_dir.pop(); // Remove the executable name to get the directory
         let dir: std::string::String = exe_dir
             .join(format!("cache/{}", name))
             .to_str()

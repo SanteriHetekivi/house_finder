@@ -131,7 +131,7 @@ pub(self) async fn etuovi_announcement(
         .message(&announcement.postal_code(cache).await?)
         .await?;
     if let Some(telegram) = &telegram {
-        telegram.send_message(&message).await?;
+        let _: teloxide::prelude::Message = telegram.send_message(&message).await?;
     }
     println!("{}\n", message);
     return Ok(true);

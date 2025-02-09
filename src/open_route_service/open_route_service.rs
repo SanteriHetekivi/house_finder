@@ -12,7 +12,7 @@ impl OpenRouteService {
         token: &std::primitive::str,
     ) -> Result<Self, reqwest::header::InvalidHeaderValue> {
         let mut headers: reqwest::header::HeaderMap = reqwest::header::HeaderMap::new();
-        headers.append(
+        let _: bool = headers.append(
             "Authorization",
             reqwest::header::HeaderValue::from_str(token)?,
         );

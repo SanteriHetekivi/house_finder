@@ -8,7 +8,7 @@ pub(crate) enum Error {
     TokioTaskJoinError(tokio::task::JoinError),
 }
 impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::JSONError(e) => write!(f, "Request or IO error:\n{}", e),
             Error::RegexError(e) => write!(f, "Regex error:\n{}", e),
