@@ -5,11 +5,11 @@
 pub(crate) async fn run(
     args: super::Args,
     telegram: std::option::Option<crate::telegram::Telegram>,
-) -> std::result::Result<std::primitive::u128, super::Error> {
+) -> std::result::Result<(), super::Error> {
     let mut handles: std::vec::Vec<
-        tokio::task::JoinHandle<std::result::Result<std::primitive::u128, super::Error>>,
+        tokio::task::JoinHandle<std::result::Result<std::vec::Vec<super::Result>, super::Error>>,
     > = std::vec::Vec::<
-        tokio::task::JoinHandle<std::result::Result<std::primitive::u128, super::Error>>,
+        tokio::task::JoinHandle<std::result::Result<std::vec::Vec<super::Result>, super::Error>>,
     >::new();
     let location_comparison: std::option::Option<longitude::Location> =
         match args.location_latitude.clone() {
@@ -32,7 +32,6 @@ pub(crate) async fn run(
     let cache: std::primitive::bool = args.cache;
     let open_route_service_token: std::option::Option<std::string::String> =
         args.open_route_service_token.clone();
-    let telegram: std::option::Option<crate::telegram::Telegram> = telegram.clone();
     let cities: std::vec::Vec<std::string::String> = args.cities.clone();
     handles.push(tokio::task::spawn(async move {
         etuovi(
@@ -40,19 +39,52 @@ pub(crate) async fn run(
             location_comparison,
             cache,
             open_route_service_token,
-            telegram,
             args.price_max,
             cities,
         )
         .await
     }));
 
-    let mut count: std::primitive::u128 = 0;
+    let mut results: std::vec::Vec<super::Result> = std::vec::Vec::<super::Result>::new();
     for handle in handles {
-        count += handle.await??;
+        for result in handle.await?? {
+            results.push(result);
+        }
     }
 
-    return Ok(count);
+    let message: std::string::String = format!("Found {}!", results.len());
+    println!("{}", message);
+    let telegram: std::option::Option<crate::telegram::Telegram> = telegram.clone();
+    let mut handles_telegram: std::vec::Vec<
+        tokio::task::JoinHandle<
+            std::result::Result<teloxide::prelude::Message, teloxide::RequestError>,
+        >,
+    > = std::vec::Vec::<
+        tokio::task::JoinHandle<
+            std::result::Result<teloxide::prelude::Message, teloxide::RequestError>,
+        >,
+    >::new();
+    if let Some(telegram_bot) = telegram.clone() {
+        handles_telegram.push(tokio::task::spawn(async move {
+            telegram_bot.send_message(&message).await
+        }));
+    }
+
+    if !results.is_empty() {
+        results.sort_by(|a, b| a.sort_key().cmp(&b.sort_key()));
+        for result in &results {
+            let message: std::string::String = result.message();
+            println!("{}", &message);
+            if let Some(telegram_bot) = telegram.clone() {
+                handles_telegram.push(tokio::task::spawn(async move {
+                    telegram_bot.send_message(&message).await
+                }));
+            }
+        }
+        println!("Wrote file: {}", super::Result::write_csv(&results)?);
+    }
+
+    return Ok(());
 }
 
 /// Handle Etuovi announcements.
@@ -62,7 +94,6 @@ pub(crate) async fn run(
 /// * `location_comparison` - Optional location to compare against.
 /// * `cache` - Cache data that can be changed?
 /// * `open_route_service_token` - Optional OpenRouteService authorization token: https://openrouteservice.org/sign-up/
-/// * `telegram` - Optional Telegram bot.
 /// * `price_max` - Optional maximum price.
 /// * `cities` - Cities.
 pub(self) async fn etuovi(
@@ -70,14 +101,13 @@ pub(self) async fn etuovi(
     location_comparison: std::option::Option<longitude::Location>,
     cache: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
-    telegram: std::option::Option<crate::telegram::Telegram>,
     price_max: std::option::Option<std::primitive::u32>,
     cities: std::vec::Vec<std::string::String>,
-) -> std::result::Result<std::primitive::u128, super::Error> {
+) -> std::result::Result<std::vec::Vec<super::Result>, super::Error> {
     let mut handles: std::vec::Vec<
-        tokio::task::JoinHandle<std::result::Result<std::primitive::bool, super::Error>>,
+        tokio::task::JoinHandle<std::result::Result<Option<super::Result>, super::Error>>,
     > = std::vec::Vec::<
-        tokio::task::JoinHandle<std::result::Result<std::primitive::bool, super::Error>>,
+        tokio::task::JoinHandle<std::result::Result<Option<super::Result>, super::Error>>,
     >::new();
     for announcement in
         crate::etuovi::Etuovi::new(cache, publishing_time_search_criteria, price_max, cities)?
@@ -90,27 +120,24 @@ pub(self) async fn etuovi(
             location_comparison.clone();
         let open_route_service_token: std::option::Option<std::string::String> =
             open_route_service_token.clone();
-        let telegram: std::option::Option<crate::telegram::Telegram> = telegram.clone();
         handles.push(tokio::task::spawn(async move {
             etuovi_announcement(
                 announcement,
                 location_comparison,
                 cache,
                 open_route_service_token,
-                telegram,
             )
             .await
         }));
     }
 
-    let mut count: std::primitive::u128 = 0;
-
+    let mut results: std::vec::Vec<super::Result> = std::vec::Vec::<super::Result>::new();
     for handle in handles {
-        if handle.await?? {
-            count += 1;
+        if let Some(result) = handle.await?? {
+            results.push(result);
         }
     }
-    return Ok(count);
+    return Ok(results);
 }
 
 /// Handle Etuovi announcement.
@@ -120,14 +147,12 @@ pub(self) async fn etuovi(
 /// * `location_comparison` - Optional location_comparison to compare against.
 /// * `cache` - Cache data that can be changed?
 /// * `open_route_service_token` - OpenRouteService authorization token: https://openrouteservice.org/sign-up/
-/// * `telegram` - Optional Telegram bot.
 pub(self) async fn etuovi_announcement(
     announcement: crate::etuovi::Announcement,
     location_comparison: std::option::Option<longitude::Location>,
     cache: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
-    telegram: std::option::Option<crate::telegram::Telegram>,
-) -> std::result::Result<std::primitive::bool, super::Error> {
+) -> std::result::Result<Option<super::Result>, super::Error> {
     let mut house: crate::app::house::House = crate::app::House::new(
         &announcement.url(),
         announcement.location(),
@@ -142,17 +167,12 @@ pub(self) async fn etuovi_announcement(
     );
 
     if !house.include().await? {
-        return Ok(false);
+        return Ok(None);
     }
 
-    let result: super::Result = house
-        .result(&announcement.postal_code(cache).await?)
-        .await?;
-
-    let message: std::string::String = result.message();
-    if let Some(telegram) = &telegram {
-        let _: teloxide::prelude::Message = telegram.send_message(&message).await?;
-    }
-    println!("{}\n", message);
-    return Ok(true);
+    return Ok(Some(
+        house
+            .result(&announcement.postal_code(cache).await?)
+            .await?,
+    ));
 }

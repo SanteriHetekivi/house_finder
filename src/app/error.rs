@@ -6,6 +6,7 @@ pub(crate) enum Error {
     TeloxideError(teloxide::RequestError),
     OpenRouteServiceError(crate::open_route_service::Error),
     TokioTaskJoinError(tokio::task::JoinError),
+    IOError(std::io::Error),
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -16,6 +17,7 @@ impl std::fmt::Display for Error {
             Error::TeloxideError(e) => write!(f, "Teloxide error:\n{}", e),
             Error::OpenRouteServiceError(e) => write!(f, "OpenRouteService error:\n{}", e),
             Error::TokioTaskJoinError(e) => write!(f, "Tokio task join error:\n{}", e),
+            Error::IOError(e) => write!(f, "IO error:\n{}", e),
         }
     }
 }
@@ -47,5 +49,10 @@ impl From<crate::open_route_service::Error> for Error {
 impl From<tokio::task::JoinError> for Error {
     fn from(error: tokio::task::JoinError) -> Self {
         Error::TokioTaskJoinError(error)
+    }
+}
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Self {
+        Error::IOError(error)
     }
 }
