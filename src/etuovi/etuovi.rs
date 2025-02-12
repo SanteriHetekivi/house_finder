@@ -1,6 +1,6 @@
 /// Etuovi.com API.
 pub(crate) struct Etuovi {
-    pub(self) client: crate::client::Client,
+    pub(self) client: crate::client::Client<crate::client::BetweenCalls>,
     pub(self) publishing_time_search_criteria: std::string::String,
     pub(self) price_max: std::option::Option<std::primitive::u32>,
     pub(self) cities: std::vec::Vec<std::string::String>,
@@ -27,8 +27,7 @@ impl Etuovi {
                 } else {
                     None
                 },
-                1000,
-                None,
+                Some(std::sync::Arc::clone(&super::LIMITER)),
             )?,
             publishing_time_search_criteria: publishing_time_search_criteria.to_string(),
             price_max,

@@ -3,6 +3,14 @@ pub(crate) struct OpenRouteService {
     headers: reqwest::header::HeaderMap,
 }
 
+static LIMITER: once_cell::sync::Lazy<
+    std::sync::Arc<tokio::sync::Mutex<crate::client::CallsPerMinute>>,
+> = once_cell::sync::Lazy::new(|| {
+    std::sync::Arc::new(tokio::sync::Mutex::new(crate::client::CallsPerMinute::new(
+        40,
+    )))
+});
+
 impl OpenRouteService {
     /// Create new OpenRouteService API client.
     ///
@@ -32,9 +40,8 @@ impl OpenRouteService {
         Ok(crate::client::Client::new(
             // Always caching cycling directions, because the API is rate limited and they should not change.
             Some("open_route_service/directions/cycling-regular"),
-            0,
             // OpenRouteServices has a rate limit of 40 requests per minute for free users.
-            Some(40),
+            Some(std::sync::Arc::clone(&LIMITER)),
         )?
         .post_json::<super::Response>(
             "https://api.openrouteservice.org/v2/directions/cycling-regular/json",

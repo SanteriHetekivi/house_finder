@@ -1,29 +1,11 @@
 /// HTTP client for making requests to the APIs.
-
-pub(self) struct CallsPerMinute {
-    pub(self) count: std::primitive::u8,
-    pub(self) zeroed: tokio::time::Instant,
-}
-
-struct DomainRateLimit {
-    pub(self) last_call_time: std::option::Option<tokio::time::Instant>,
-    pub(self) calls_per_minute: CallsPerMinute,
-}
-
-static RATE_LIMIT_DATA: once_cell::sync::Lazy<
-    std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, DomainRateLimit>>>,
-> = once_cell::sync::Lazy::new(|| {
-    std::sync::Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new()))
-});
-
-pub(crate) struct Client {
+pub(crate) struct Client<L: super::Limiter> {
     pub(self) client: reqwest::Client,
     pub(self) cache: std::option::Option<crate::cache::Cache>,
-    pub(self) max_every_ms: std::primitive::u16,
-    pub(self) max_per_minute: std::option::Option<std::primitive::u8>,
+    pub(self) limiter: std::option::Option<std::sync::Arc<tokio::sync::Mutex<L>>>,
 }
 
-impl Client {
+impl<L: super::Limiter> Client<L> {
     /// Initilizes a new client.
     ///
     /// # Arguments
@@ -32,8 +14,7 @@ impl Client {
     /// * `max_per_minute` - If provided, the client will rate limit the requests to the given amount per minute.
     pub(crate) fn new(
         cache_name: std::option::Option<&std::primitive::str>,
-        max_every_ms: std::primitive::u16,
-        max_per_minute: std::option::Option<std::primitive::u8>,
+        limiter: std::option::Option<std::sync::Arc<tokio::sync::Mutex<L>>>,
     ) -> std::result::Result<Self, super::RequestError> {
         Ok(Self {
             client: reqwest::Client::builder().cookie_store(true).build()?,
@@ -44,8 +25,7 @@ impl Client {
                 )?),
                 None => None,
             },
-            max_every_ms,
-            max_per_minute,
+            limiter,
         })
     }
 
@@ -111,98 +91,12 @@ impl Client {
         }
     }
 
-    /// Get the main domain from the given URL.
-    ///
-    /// # Arguments
-    /// * `url` - URL to get the main domain from.
-    pub(self) fn get_main_domain(url: &str) -> std::result::Result<String, url::ParseError> {
-        let parsed_url: url::Url = url::Url::parse(url)?;
-        let parts: Vec<&str> = parsed_url
-            .host_str()
-            .ok_or(url::ParseError::EmptyHost)?
-            .split('.')
-            .collect();
-        if parts.len() < 2 {
-            return Err(url::ParseError::EmptyHost);
-        }
-        Ok(format!(
-            "{}.{}",
-            parts[parts.len() - 2],
-            parts[parts.len() - 1]
-        ))
-    }
-
     /// Rate limit the requests.
-    /// The rate limit is per main domain (www.test.com => test.com).
-    /// The rate limit is 1 request per second per domain.
-    /// If client has custom calls per minute rate limit, also use it.
-    ///
-    /// # Arguments
-    /// * `url` - URL to get main domain from.
-    pub(self) async fn rate_limit(&self, url: &std::primitive::str) -> Result<(), url::ParseError> {
-        // No rate limit.
-        if self.max_every_ms == 0 && self.max_per_minute.is_none() {
-            return Ok(());
+    pub(self) async fn rate_limit(&self) -> Result<(), url::ParseError> {
+        if let Some(limiter) = &self.limiter {
+            let mut limiter: tokio::sync::MutexGuard<'_, L> = limiter.lock().await;
+            limiter.limit().await;
         }
-
-        // Get data.
-        let mut rate_limit_data: tokio::sync::MutexGuard<
-            '_,
-            std::collections::HashMap<String, DomainRateLimit>,
-        > = RATE_LIMIT_DATA.lock().await;
-        let domain_rate_limit: &mut DomainRateLimit = rate_limit_data
-            .entry(Self::get_main_domain(url)?.to_string())
-            .or_insert(DomainRateLimit {
-                last_call_time: None,
-                calls_per_minute: CallsPerMinute {
-                    count: 0,
-                    zeroed: tokio::time::Instant::now(),
-                },
-            });
-
-        // Call every domain only once per second.
-        if self.max_every_ms != 0 {
-            if let Some(last_call_time) = domain_rate_limit.last_call_time {
-                let duration: tokio::time::Duration =
-                    tokio::time::Duration::from_millis(self.max_every_ms.into());
-                if tokio::time::Instant::now().duration_since(last_call_time) < duration {
-                    tokio::time::sleep(
-                        duration - tokio::time::Instant::now().duration_since(last_call_time),
-                    )
-                    .await;
-                }
-            }
-        }
-
-        // If client has custom calls per minute rate limit, also use it.
-        if let Some(max_per_minute) = self.max_per_minute {
-            let minute: tokio::time::Duration = tokio::time::Duration::from_secs(60);
-            // Zero the call count every minute.
-            if minute
-                <= tokio::time::Instant::now()
-                    .duration_since(domain_rate_limit.calls_per_minute.zeroed)
-            {
-                domain_rate_limit.calls_per_minute.count = 0;
-                domain_rate_limit.calls_per_minute.zeroed = tokio::time::Instant::now();
-            }
-
-            // Sleep if the rate limit per minute is reached.
-            if max_per_minute <= domain_rate_limit.calls_per_minute.count {
-                tokio::time::sleep(
-                    minute
-                        - tokio::time::Instant::now()
-                            .duration_since(domain_rate_limit.calls_per_minute.zeroed),
-                )
-                .await;
-                domain_rate_limit.calls_per_minute.count = 0;
-                domain_rate_limit.calls_per_minute.zeroed = tokio::time::Instant::now();
-            }
-
-            // Increase the call count.
-            domain_rate_limit.calls_per_minute.count += 1;
-        }
-
-        domain_rate_limit.last_call_time = Some(tokio::time::Instant::now());
         return Ok(());
     }
 
@@ -220,7 +114,7 @@ impl Client {
         json: std::option::Option<serde_json::Value>,
         headers: std::option::Option<reqwest::header::HeaderMap>,
     ) -> std::result::Result<reqwest::Response, super::RequestError> {
-        self.rate_limit(url).await?;
+        self.rate_limit().await?;
 
         let mut builder: reqwest::RequestBuilder = self.client.request(method, url);
         if let Some(headers) = headers {

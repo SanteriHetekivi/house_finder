@@ -76,14 +76,7 @@ async fn main() -> std::result::Result<(), self::app::Error> {
         }
     };
     match self::app::run(args, telegram.clone()).await {
-        Ok(count) => {
-            let message: std::string::String = format!("Found {}!", count);
-            println!("{}", message);
-            if let Some(telegram) = &telegram {
-                let _: teloxide::prelude::Message = telegram.send_message(&message).await?;
-            }
-            Ok(())
-        }
+        Ok(()) => Ok(()),
         Err(error) => {
             let message: std::string::String = format!("Got error: {:?}", error);
             eprintln!("{}", message);

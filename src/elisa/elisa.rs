@@ -2,6 +2,14 @@ pub(crate) struct Elisa {
     products: std::vec::Vec<super::Product>,
 }
 
+static LIMITER: once_cell::sync::Lazy<
+    std::sync::Arc<tokio::sync::Mutex<crate::client::BetweenCalls>>,
+> = once_cell::sync::Lazy::new(|| {
+    std::sync::Arc::new(tokio::sync::Mutex::new(crate::client::BetweenCalls::new(
+        1000,
+    )))
+});
+
 impl Elisa {
     /// Create a new Elisa instance.
     pub(crate) async fn new(
@@ -16,8 +24,7 @@ impl Elisa {
             } else {
                 None
             },
-            1000,
-            None,
+            Some(std::sync::Arc::clone(&LIMITER)),
         )?
         .get_json::<std::vec::Vec<super::Address>>(&format!(
             "https://elisa.fi/kauppa/rest/address/search/{}/{}",
@@ -31,8 +38,7 @@ impl Elisa {
                 } else {
                     None
                 },
-                1000,
-                None,
+                Some(std::sync::Arc::clone(&LIMITER)),
             )?
             .get_json::<super::Response>(&format!(
                 "https://elisa.fi/kauppa/rest/products/fixedBroadbandProducts/{}/{}",
