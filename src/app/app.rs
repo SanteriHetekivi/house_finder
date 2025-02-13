@@ -35,6 +35,8 @@ pub(crate) async fn run(
         args.cache_elisa_fixed_broadband_products;
     let open_route_service_token: std::option::Option<std::string::String> =
         args.open_route_service_token.clone();
+    let house_min_square_meters: std::option::Option<std::primitive::u16> =
+        args.house_min_square_meters;
     let cities: std::vec::Vec<std::string::String> = args.cities.clone();
     handles.push(tokio::task::spawn(async move {
         etuovi(
@@ -46,6 +48,7 @@ pub(crate) async fn run(
             open_route_service_token,
             args.price_max,
             cities,
+            house_min_square_meters,
         )
         .await
     }));
@@ -110,6 +113,7 @@ pub(self) async fn etuovi(
     open_route_service_token: std::option::Option<std::string::String>,
     price_max: std::option::Option<std::primitive::u32>,
     cities: std::vec::Vec<std::string::String>,
+    house_min_square_meters: std::option::Option<std::primitive::u16>,
 ) -> std::result::Result<std::vec::Vec<super::Result>, super::Error> {
     let mut handles: std::vec::Vec<
         tokio::task::JoinHandle<std::result::Result<Option<super::Result>, super::Error>>,
@@ -138,6 +142,7 @@ pub(self) async fn etuovi(
                 cache_etuovi_html,
                 cache_elisa_fixed_broadband_products,
                 open_route_service_token,
+                house_min_square_meters,
             )
             .await
         }));
@@ -165,6 +170,7 @@ pub(self) async fn etuovi_announcement(
     cache_etuovi_html: std::primitive::bool,
     cache_elisa_fixed_broadband_products: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
+    house_min_square_meters: std::option::Option<std::primitive::u16>,
 ) -> std::result::Result<Option<super::Result>, super::Error> {
     let mut house: crate::app::house::House = crate::app::House::new(
         &announcement.url(),
@@ -177,6 +183,7 @@ pub(self) async fn etuovi_announcement(
         location_comparison.clone(),
         open_route_service_token,
         cache_elisa_fixed_broadband_products,
+        house_min_square_meters,
     );
 
     if !house.include().await? {

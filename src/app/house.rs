@@ -11,6 +11,7 @@ pub(crate) struct House {
     pub(self) open_route_service_token: std::option::Option<std::string::String>,
     pub(self) cache_elisa_fixed_broadband_products: std::primitive::bool,
     pub(self) biking_km_to_location: std::option::Option<std::primitive::u16>,
+    pub(self) house_min_square_meters: std::option::Option<std::primitive::u16>,
 }
 
 impl House {
@@ -38,6 +39,7 @@ impl House {
         location_comparison: std::option::Option<longitude::Location>,
         open_route_service_token: std::option::Option<std::string::String>,
         cache_elisa_fixed_broadband_products: std::primitive::bool,
+        house_min_square_meters: std::option::Option<std::primitive::u16>,
     ) -> Self {
         Self {
             url: url.to_string(),
@@ -51,6 +53,7 @@ impl House {
             open_route_service_token,
             cache_elisa_fixed_broadband_products,
             biking_km_to_location: None,
+            house_min_square_meters,
         }
     }
 
@@ -124,13 +127,15 @@ impl House {
         &mut self,
     ) -> std::result::Result<std::primitive::bool, crate::open_route_service::Error> {
         // Check area.
-        if let Some(square_meters_house) = self.square_meters_house {
-            if square_meters_house < 40 {
-                return Ok(false);
-            }
-        } else if let Some(square_meters_total) = self.square_meters_total {
-            if square_meters_total < 40 {
-                return Ok(false);
+        if let Some(house_min_square_meters) = self.house_min_square_meters {
+            if let Some(square_meters_house) = self.square_meters_house {
+                if square_meters_house < house_min_square_meters {
+                    return Ok(false);
+                }
+            } else if let Some(square_meters_total) = self.square_meters_total {
+                if square_meters_total < house_min_square_meters {
+                    return Ok(false);
+                }
             }
         }
 

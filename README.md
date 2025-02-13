@@ -34,6 +34,7 @@ For example:
 - `--cache-elisa-fixed-broadband-products` - (Optional) If given stores all of Elisa fixedBroadbandProducts request data to cache directory in same directory as executable.
 - `--cache-etuovi-announcements` - (Optional) If given stores all of Etuovi announcement search request data to cache directory in same directory as executable.
 - `--cache-etuovi-html` - (Optional) If given stores all of Etuovi property page HTML to cache directory in same directory as executable.
+- `--house-min-square-meters` - (Optional) If given, only get houses that are bigger than this. Only if house or total area are given. Compare with total area only if house area is not given.
 
 ## Info
 

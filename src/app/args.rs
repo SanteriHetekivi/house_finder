@@ -56,4 +56,8 @@ pub(crate) struct Args {
     // Cache Etuovi HTML?
     #[arg(long, action, help = "Cache Etuovi HTML?")]
     pub(super) cache_etuovi_html: bool,
+
+    // Minimun area (m²) of the house.
+    #[arg(long, action, help = "Minimum area (m²) of the house.")]
+    pub(super) house_min_square_meters: Option<std::primitive::u16>,
 }
