@@ -173,7 +173,7 @@ pub(self) async fn etuovi(
 /// * `cache` - Cache data that can be changed?
 /// * `open_route_service_token` - OpenRouteService authorization token: https://openrouteservice.org/sign-up/
 pub(self) async fn etuovi_announcement(
-    announcement: crate::etuovi::Announcement,
+    mut announcement: crate::etuovi::Announcement,
     location_comparison: std::option::Option<longitude::Location>,
     cache_etuovi_html: std::primitive::bool,
     cache_elisa_fixed_broadband_products: std::primitive::bool,

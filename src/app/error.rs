@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub(crate) enum Error {
     JSONError(crate::client::JSONError),
-    RegexError(crate::client::RegexError),
+    RegexError(crate::etuovi::RegexError),
     RequestError(crate::client::RequestError),
     TeloxideError(teloxide::RequestError),
     OpenRouteServiceError(crate::open_route_service::Error),
@@ -26,8 +26,8 @@ impl From<crate::client::JSONError> for Error {
         Error::JSONError(err)
     }
 }
-impl From<crate::client::RegexError> for Error {
-    fn from(err: crate::client::RegexError) -> Self {
+impl From<crate::etuovi::RegexError> for Error {
+    fn from(err: crate::etuovi::RegexError) -> Self {
         Error::RegexError(err)
     }
 }

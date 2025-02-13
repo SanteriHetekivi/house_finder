@@ -9,6 +9,7 @@ pub(crate) struct Announcement {
     pub(self) search_price: std::option::Option<std::primitive::u32>,
     pub(self) area: std::option::Option<std::primitive::f64>,
     pub(self) total_area: std::option::Option<std::primitive::f64>,
+    pub(self) html: std::option::Option<std::string::String>,
 }
 
 impl Announcement {
@@ -56,21 +57,43 @@ impl Announcement {
     /// Postal code.
     ///
     /// # Arguments
-    /// * `cache` - Use cache?
+    /// * `cache` - Use cache for HTTP request?
     pub(crate) async fn postal_code(
-        &self,
+        &mut self,
         cache: std::primitive::bool,
-    ) -> std::result::Result<std::string::String, crate::client::RegexError> {
-        crate::client::Client::new(
-            if cache { Some("etuovi/kohde") } else { None },
-            Some(std::sync::Arc::clone(&super::LIMITER)),
-        )?
-        .get_regex(&self.url(), r#""postCode":"([0-9]{5})""#)
-        .await
+    ) -> std::result::Result<std::string::String, super::RegexError> {
+        Ok(regex::Regex::new(r#""postCode":"([0-9]{5})""#)?
+            .captures(&self.html(cache).await?)
+            .unwrap()
+            .get(1)
+            .unwrap()
+            .as_str()
+            .to_string())
     }
 
     /// Construction year.
     pub(crate) fn year(&self) -> std::option::Option<std::primitive::u16> {
         self.construction_finished_year
+    }
+
+    /// Get HTML for this announcement.
+    ///
+    /// # Arguments
+    /// * `cache` - Use cache for HTTP request?
+    pub(self) async fn html(
+        &mut self,
+        cache: std::primitive::bool,
+    ) -> std::result::Result<std::string::String, crate::client::RequestError> {
+        if let Some(html) = &self.html {
+            return Ok(html.clone());
+        }
+        let html = crate::client::Client::new(
+            if cache { Some("etuovi/kohde") } else { None },
+            Some(std::sync::Arc::clone(&super::LIMITER)),
+        )?
+        .get_text(&self.url())
+        .await?;
+        self.html = Some(html.clone());
+        return Ok(html);
     }
 }

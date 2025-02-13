@@ -156,32 +156,6 @@ impl<L: super::Limiter> Client<L> {
         }
     }
 
-    /// Get regular expression first capture group from the given URL.
-    /// If cache is enabled, the text is cached and returned from cache.
-    ///
-    /// # Arguments
-    /// * `method` - Method for the request.
-    /// * `url` - URL for the request.
-    /// * `regex` - Regex to extract the value with.
-    /// * `json` - Optional JSON data for the request.
-    /// * `headers` - Optional headers for the request.
-    pub(self) async fn regex(
-        &self,
-        method: reqwest::Method,
-        url: &std::primitive::str,
-        regex: &std::primitive::str,
-        json: std::option::Option<serde_json::Value>,
-        headers: std::option::Option<reqwest::header::HeaderMap>,
-    ) -> std::result::Result<std::string::String, super::RegexError> {
-        Ok(regex::Regex::new(regex)?
-            .captures(&self.text(method, url, json, headers).await?)
-            .unwrap()
-            .get(1)
-            .unwrap()
-            .as_str()
-            .to_string())
-    }
-
     /// Get JSON from the given URL.
     /// If cache is enabled, the JSON is cached and returned from cache.
     ///
@@ -234,13 +208,11 @@ impl<L: super::Limiter> Client<L> {
     /// # Arguments
     /// * `url` - URL to get text from.
     /// * `regex` - Regex to extract the value with.
-    pub(crate) async fn get_regex(
+    pub(crate) async fn get_text(
         &self,
         url: &std::primitive::str,
-        regex: &std::primitive::str,
-    ) -> std::result::Result<std::string::String, super::RegexError> {
-        self.regex(reqwest::Method::GET, url, regex, None, None)
-            .await
+    ) -> std::result::Result<std::string::String, super::RequestError> {
+        self.text(reqwest::Method::GET, url, None, None).await
     }
 
     /// Make POST request and get JSON.
