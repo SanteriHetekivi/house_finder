@@ -17,7 +17,9 @@ For example:
   --location-longitude=<LOCATION-LONGITUDE> \
   --open-route-service-token '<OPEN-ROUTE-SERVICE-AUTHORIZATION-TOKEN>' \
   --telegram-bot-token '<TELEGRAM-BOT-TOKEN>' \
-  --telegram-user-id <TELEGRAM-USER-ID>
+  --telegram-user-id <TELEGRAM-USER-ID> \
+  --cache-etuovi-html \
+  --cache-elisa-fixed-broadband-products
 ```
 
 ## Arguments
@@ -29,22 +31,35 @@ For example:
 - `--open-route-service-token` - (Optional) [OpenRouteService](https://openrouteservice.org/) authorization token: https://openrouteservice.org/sign-up/
 - `--telegram-bot-token` - (Optional) (Requires: --telegram-user-id) Telegram bot token from [BotFather](https://telegram.me/BotFather).
 - `--telegram-user-id` - (Optional) (Requires: --telegram-bot-token) Your Telegram user ID.
-- `--cache` - (Optional) If given stores all of the request data to cache directory in same directory as executable.
+- `--cache-elisa-fixed-broadband-products` - (Optional) If given stores all of Elisa fixedBroadbandProducts request data to cache directory in same directory as executable.
+- `--cache-etuovi-announcements` - (Optional) If given stores all of Etuovi announcement search request data to cache directory in same directory as executable.
+- `--cache-etuovi-html` - (Optional) If given stores all of Etuovi property page HTML to cache directory in same directory as executable.
 
 ## Info
 
 ### Cache
 1. Writes cache to same directory executable is in.
    - If run with `cargo run` directory will be created in `./target/debug/cache` directory.
-1. Even without `--cache` argument always caches [OpenRouteService](https://openrouteservice.org/) biking distance, because it includes coordinates and should not change.
+1. Will always cache following data:
+  - [OpenRouteService](https://openrouteservice.org/) biking distance, because it includes coordinates and should not change.
+  - Elisa address search results, because those should not change, because are just postal code and street address as Elisa's own identifier.
+1. You can always manually remove cache directories.
+1. With following arguments you can cache more data:
+  - `--cache-elisa-fixed-broadband-products` If given stores all of Elisa fixedBroadbandProducts request data to cache directory in same directory as executable.
+    - You should use this, because offered products should not change all the time.
+  - `--cache-etuovi-announcements` - If given stores all of Etuovi announcement search request data to cache directory in same directory as executable.
+    - This is usually only for development use, because it used and there is new results with this it will never get them for same search parameters.
+  - `--cache-etuovi-html` - If given stores all of Etuovi property page HTML to cache directory in same directory as executable.
+    - You should use this, because sellers wont update their pages all the time.
+1. Using caches you leviate load on services and also the script will run mutch faster, because requests wont be rate limited.
 
 ### Rate limit
 Requests are rate limited.
-Rate limits are second- and top-domain specific.
-So for example if I made the call to www.google.com program would rate limit it together with all the google.com requests.
+Rate limits are service specific.
+So for example all calls to Elisa are rate limited together.
 
 #### OpenRouteServices
 Request to [OpenRouteService](https://openrouteservice.org/) are only rate limited by 40 calls per minute.
 
 #### Every other service
-Requests to every other service are rate limited to once per second.
+Requests to every other service are rate limited to once per second so we don't overload their servers with this script.

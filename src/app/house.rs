@@ -9,7 +9,7 @@ pub(crate) struct House {
     pub(self) year: std::option::Option<std::primitive::u16>,
     pub(self) location_comparison: std::option::Option<longitude::Location>,
     pub(self) open_route_service_token: std::option::Option<std::string::String>,
-    pub(self) cache: std::primitive::bool,
+    pub(self) cache_elisa_fixed_broadband_products: std::primitive::bool,
     pub(self) biking_km_to_location: std::option::Option<std::primitive::f64>,
 }
 
@@ -26,7 +26,7 @@ impl House {
     /// * `year` - Optional construction year.
     /// * `location_comparison` - Location for the location.
     /// * `open_route_service_token` - Open Route Service key.
-    /// * `cache` - Use cache?
+    /// * `cache_elisa_fixed_broadband_products` - Use cache when getting Elisa fixed broadband products??
     pub(super) fn new(
         url: &std::primitive::str,
         location_house: std::option::Option<longitude::Location>,
@@ -37,7 +37,7 @@ impl House {
         year: std::option::Option<std::primitive::u16>,
         location_comparison: std::option::Option<longitude::Location>,
         open_route_service_token: std::option::Option<std::string::String>,
-        cache: std::primitive::bool,
+        cache_elisa_fixed_broadband_products: std::primitive::bool,
     ) -> Self {
         Self {
             url: url.to_string(),
@@ -49,7 +49,7 @@ impl House {
             year,
             location_comparison,
             open_route_service_token,
-            cache,
+            cache_elisa_fixed_broadband_products,
             biking_km_to_location: None,
         }
     }
@@ -74,9 +74,13 @@ impl House {
         postal_code: &std::primitive::str,
     ) -> std::result::Result<std::vec::Vec<super::Internet>, crate::client::JSONError> {
         let mut internets: std::vec::Vec<super::Internet> = std::vec::Vec::<super::Internet>::new();
-        for elisa_product in crate::elisa::Elisa::new(postal_code, &self.street_address, self.cache)
-            .await?
-            .products()
+        for elisa_product in crate::elisa::Elisa::new(
+            postal_code,
+            &self.street_address,
+            self.cache_elisa_fixed_broadband_products,
+        )
+        .await?
+        .products()
         {
             let mbps: std::primitive::u32 = elisa_product.mbps();
             if mbps == 0 || 100 < mbps {

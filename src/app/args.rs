@@ -45,7 +45,15 @@ pub(crate) struct Args {
     )]
     pub(crate) telegram_user_id: Option<std::primitive::u64>,
 
-    // Chache data that can be changed?
-    #[arg(long, action, help = "Cache data that can be changed?")]
-    pub(super) cache: bool,
+    // Cache Elisa fixedBroadbandProducts result?
+    #[arg(long, action, help = "Cache Elisa fixedBroadbandProducts result?")]
+    pub(super) cache_elisa_fixed_broadband_products: bool,
+
+    // Cache Etuovi announcements search result?
+    #[arg(long, action, help = "Cache Etuovi announcements search result?")]
+    pub(super) cache_etuovi_announcements: bool,
+
+    // Cache Etuovi HTML?
+    #[arg(long, action, help = "Cache Etuovi HTML?")]
+    pub(super) cache_etuovi_html: bool,
 }

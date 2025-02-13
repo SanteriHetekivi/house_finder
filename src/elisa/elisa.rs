@@ -15,15 +15,12 @@ impl Elisa {
     pub(crate) async fn new(
         postal_code: &std::primitive::str,
         street_address: &std::primitive::str,
-        cache: std::primitive::bool,
+        cache_fixed_boardband_products: std::primitive::bool,
     ) -> std::result::Result<Self, crate::client::JSONError> {
         let mut products: std::vec::Vec<super::Product> = std::vec::Vec::<super::Product>::new();
         for address in crate::client::Client::new(
-            if cache {
-                Some("elisa/address/search")
-            } else {
-                None
-            },
+            // We should alwaus cache the address result, because it is not likely to change.
+            Some("elisa/address/search"),
             Some(std::sync::Arc::clone(&LIMITER)),
         )?
         .get_json::<std::vec::Vec<super::Address>>(&format!(
@@ -33,7 +30,7 @@ impl Elisa {
         .await?
         {
             for product in crate::client::Client::new(
-                if cache {
+                if cache_fixed_boardband_products {
                     Some("elisa/products/fixedBroadbandProducts")
                 } else {
                     None

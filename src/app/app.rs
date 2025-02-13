@@ -29,7 +29,10 @@ pub(crate) async fn run(
                 None
             }
         };
-    let cache: std::primitive::bool = args.cache;
+    let cache_etuovi_announcements: std::primitive::bool = args.cache_etuovi_announcements;
+    let cache_etuovi_html: std::primitive::bool = args.cache_etuovi_html;
+    let cache_elisa_fixed_broadband_products: std::primitive::bool =
+        args.cache_elisa_fixed_broadband_products;
     let open_route_service_token: std::option::Option<std::string::String> =
         args.open_route_service_token.clone();
     let cities: std::vec::Vec<std::string::String> = args.cities.clone();
@@ -37,7 +40,9 @@ pub(crate) async fn run(
         etuovi(
             &args.publishing_time_search_criteria,
             location_comparison,
-            cache,
+            cache_etuovi_announcements,
+            cache_etuovi_html,
+            cache_elisa_fixed_broadband_products,
             open_route_service_token,
             args.price_max,
             cities,
@@ -99,7 +104,9 @@ pub(crate) async fn run(
 pub(self) async fn etuovi(
     publishing_time_search_criteria: &std::primitive::str,
     location_comparison: std::option::Option<longitude::Location>,
-    cache: std::primitive::bool,
+    cache_etuovi_announcements: std::primitive::bool,
+    cache_etuovi_html: std::primitive::bool,
+    cache_elisa_fixed_broadband_products: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
     price_max: std::option::Option<std::primitive::u32>,
     cities: std::vec::Vec<std::string::String>,
@@ -109,11 +116,15 @@ pub(self) async fn etuovi(
     > = std::vec::Vec::<
         tokio::task::JoinHandle<std::result::Result<Option<super::Result>, super::Error>>,
     >::new();
-    for announcement in
-        crate::etuovi::Etuovi::new(cache, publishing_time_search_criteria, price_max, cities)?
-            .announcements()
-            .await?
-            .iter()
+    for announcement in crate::etuovi::Etuovi::new(
+        cache_etuovi_announcements,
+        publishing_time_search_criteria,
+        price_max,
+        cities,
+    )?
+    .announcements()
+    .await?
+    .iter()
     {
         let announcement: crate::etuovi::Announcement = announcement.clone();
         let location_comparison: std::option::Option<longitude::Location> =
@@ -124,7 +135,8 @@ pub(self) async fn etuovi(
             etuovi_announcement(
                 announcement,
                 location_comparison,
-                cache,
+                cache_etuovi_html,
+                cache_elisa_fixed_broadband_products,
                 open_route_service_token,
             )
             .await
@@ -150,7 +162,8 @@ pub(self) async fn etuovi(
 pub(self) async fn etuovi_announcement(
     announcement: crate::etuovi::Announcement,
     location_comparison: std::option::Option<longitude::Location>,
-    cache: std::primitive::bool,
+    cache_etuovi_html: std::primitive::bool,
+    cache_elisa_fixed_broadband_products: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
 ) -> std::result::Result<Option<super::Result>, super::Error> {
     let mut house: crate::app::house::House = crate::app::House::new(
@@ -163,7 +176,7 @@ pub(self) async fn etuovi_announcement(
         announcement.year(),
         location_comparison.clone(),
         open_route_service_token,
-        cache,
+        cache_elisa_fixed_broadband_products,
     );
 
     if !house.include().await? {
@@ -172,7 +185,7 @@ pub(self) async fn etuovi_announcement(
 
     return Ok(Some(
         house
-            .result(&announcement.postal_code(cache).await?)
+            .result(&announcement.postal_code(cache_etuovi_html).await?)
             .await?,
     ));
 }

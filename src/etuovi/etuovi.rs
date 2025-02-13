@@ -15,14 +15,14 @@ impl Etuovi {
     /// * `price_max` - Max price in euros.
     /// * `cities` - Cities.
     pub(crate) fn new(
-        cache: std::primitive::bool,
+        cache_announcements: std::primitive::bool,
         publishing_time_search_criteria: &std::primitive::str,
         price_max: std::option::Option<std::primitive::u32>,
         cities: std::vec::Vec<std::string::String>,
     ) -> std::result::Result<Self, crate::client::RequestError> {
         Ok(Self {
             client: crate::client::Client::new(
-                if cache {
+                if cache_announcements {
                     Some("etuovi/announcements/search/listpage")
                 } else {
                     None
