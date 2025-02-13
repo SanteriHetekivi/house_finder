@@ -66,4 +66,4 @@ So for example all calls to Elisa are rate limited together.
 Request to [OpenRouteService](https://openrouteservice.org/) are only rate limited by 40 calls per minute.
 
 #### Every other service
-Requests to every other service are rate limited to once per second so we don't overload their servers with this script.
+Requests to every other service are rate limited to once per five seconds so we don't overload their servers with this script.
