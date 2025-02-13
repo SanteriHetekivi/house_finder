@@ -7,6 +7,7 @@ static LIMITER: once_cell::sync::Lazy<
     std::sync::Arc<tokio::sync::Mutex<crate::client::CallsPerMinute>>,
 > = once_cell::sync::Lazy::new(|| {
     std::sync::Arc::new(tokio::sync::Mutex::new(crate::client::CallsPerMinute::new(
+        // OpenRouteServices has a rate limit of 40 requests per minute for free users.
         40,
     )))
 });
@@ -40,7 +41,6 @@ impl OpenRouteService {
         Ok(crate::client::Client::new(
             // Always caching cycling directions, because the API is rate limited and they should not change.
             Some("open_route_service/directions/cycling-regular"),
-            // OpenRouteServices has a rate limit of 40 requests per minute for free users.
             Some(std::sync::Arc::clone(&LIMITER)),
         )?
         .post_json::<super::Response>(
