@@ -2,12 +2,12 @@
 pub(super) struct Result {
     pub(self) url: std::string::String,
     pub(self) thousands_of_euros: std::option::Option<std::primitive::u32>,
-    pub(self) square_meters_house: std::option::Option<std::primitive::f64>,
-    pub(self) euros_per_square_meter_house: std::option::Option<std::primitive::f64>,
-    pub(self) square_meters_total: std::option::Option<std::primitive::f64>,
-    pub(self) euros_per_square_meter_total: std::option::Option<std::primitive::f64>,
-    pub(self) km_to_location_straight: std::option::Option<std::primitive::f64>,
-    pub(self) km_to_location_biking: std::option::Option<std::primitive::f64>,
+    pub(self) square_meters_house: std::option::Option<std::primitive::u16>,
+    pub(self) euros_per_square_meter_house: std::option::Option<std::primitive::u32>,
+    pub(self) square_meters_total: std::option::Option<std::primitive::u16>,
+    pub(self) euros_per_square_meter_total: std::option::Option<std::primitive::u32>,
+    pub(self) km_to_location_straight: std::option::Option<std::primitive::u16>,
+    pub(self) km_to_location_biking: std::option::Option<std::primitive::u16>,
     pub(self) year: std::option::Option<std::primitive::u16>,
     pub(self) internets: std::vec::Vec<super::Internet>,
 }
@@ -93,12 +93,12 @@ impl Result {
     pub(super) fn new(
         url: std::string::String,
         thousands_of_euros: std::option::Option<std::primitive::u32>,
-        square_meters_house: std::option::Option<std::primitive::f64>,
-        euros_per_square_meter_house: std::option::Option<std::primitive::f64>,
-        square_meters_total: std::option::Option<std::primitive::f64>,
-        euros_per_square_meter_total: std::option::Option<std::primitive::f64>,
-        km_to_location_straight: std::option::Option<std::primitive::f64>,
-        km_to_location_biking: std::option::Option<std::primitive::f64>,
+        square_meters_house: std::option::Option<std::primitive::u16>,
+        euros_per_square_meter_house: std::option::Option<std::primitive::u32>,
+        square_meters_total: std::option::Option<std::primitive::u16>,
+        euros_per_square_meter_total: std::option::Option<std::primitive::u32>,
+        km_to_location_straight: std::option::Option<std::primitive::u16>,
+        km_to_location_biking: std::option::Option<std::primitive::u16>,
         year: std::option::Option<std::primitive::u16>,
         internets: std::vec::Vec<super::Internet>,
     ) -> Self {
@@ -149,42 +149,42 @@ impl Result {
         if let Some(square_meters_house) = self.square_meters_house {
             message.push_str(&Self::message_line(
                 FIELD_TO_INFO.square_meters_house,
-                square_meters_house.floor().to_string(),
+                square_meters_house.to_string(),
             ));
         }
 
         if let Some(euros_per_square_meter_house) = self.euros_per_square_meter_house {
             message.push_str(&Self::message_line(
                 FIELD_TO_INFO.euros_per_square_meter_house,
-                euros_per_square_meter_house.ceil().to_string(),
+                euros_per_square_meter_house.to_string(),
             ));
         }
 
         if let Some(square_meters_total) = self.square_meters_total {
             message.push_str(&Self::message_line(
                 FIELD_TO_INFO.square_meters_total,
-                square_meters_total.floor().to_string(),
+                square_meters_total.to_string(),
             ));
         }
 
         if let Some(euros_per_square_meter_total) = self.euros_per_square_meter_total {
             message.push_str(&Self::message_line(
                 FIELD_TO_INFO.euros_per_square_meter_total,
-                euros_per_square_meter_total.ceil().to_string(),
+                euros_per_square_meter_total.to_string(),
             ));
         }
 
         if let Some(km_to_location_straight) = self.km_to_location_straight {
             message.push_str(&Self::message_line(
                 FIELD_TO_INFO.km_to_location_straight,
-                km_to_location_straight.ceil().to_string(),
+                km_to_location_straight.to_string(),
             ));
         }
 
         if let Some(km_to_location_biking) = self.km_to_location_biking {
             message.push_str(&Self::message_line(
                 FIELD_TO_INFO.km_to_location_biking,
-                km_to_location_biking.ceil().to_string(),
+                km_to_location_biking.to_string(),
             ));
         }
 
@@ -322,7 +322,7 @@ impl Result {
     }
 
     /// Generate a key for sorting.
-    pub(super) fn sort_key(&self) -> std::primitive::i64 {
-        self.euros_per_square_meter_house.unwrap_or(0.00).round() as std::primitive::i64
+    pub(super) fn sort_key(&self) -> std::primitive::u32 {
+        self.euros_per_square_meter_house.unwrap_or(0)
     }
 }

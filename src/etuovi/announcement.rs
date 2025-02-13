@@ -28,13 +28,19 @@ impl Announcement {
     }
 
     /// Square meters for the house.
-    pub(crate) fn square_meters_house(&self) -> std::option::Option<std::primitive::f64> {
-        self.area
+    pub(crate) fn square_meters_house(&self) -> std::option::Option<std::primitive::u16> {
+        match self.area {
+            Some(area) => Some(area.floor() as std::primitive::u16),
+            None => None,
+        }
     }
 
     /// Total square meters for the whole property.
-    pub(crate) fn square_meters_total(&self) -> std::option::Option<std::primitive::f64> {
-        self.total_area
+    pub(crate) fn square_meters_total(&self) -> std::option::Option<std::primitive::u16> {
+        match self.total_area {
+            Some(total_area) => Some(total_area.floor() as std::primitive::u16),
+            None => None,
+        }
     }
 
     /// Price in euros.

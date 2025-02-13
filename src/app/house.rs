@@ -2,15 +2,15 @@
 pub(crate) struct House {
     pub(self) url: std::string::String,
     pub(self) location_house: std::option::Option<longitude::Location>,
-    pub(self) square_meters_house: std::option::Option<std::primitive::f64>,
-    pub(self) square_meters_total: std::option::Option<std::primitive::f64>,
+    pub(self) square_meters_house: std::option::Option<std::primitive::u16>,
+    pub(self) square_meters_total: std::option::Option<std::primitive::u16>,
     pub(self) euros: std::option::Option<std::primitive::u32>,
     pub(self) street_address: std::string::String,
     pub(self) year: std::option::Option<std::primitive::u16>,
     pub(self) location_comparison: std::option::Option<longitude::Location>,
     pub(self) open_route_service_token: std::option::Option<std::string::String>,
     pub(self) cache_elisa_fixed_broadband_products: std::primitive::bool,
-    pub(self) biking_km_to_location: std::option::Option<std::primitive::f64>,
+    pub(self) biking_km_to_location: std::option::Option<std::primitive::u16>,
 }
 
 impl House {
@@ -30,8 +30,8 @@ impl House {
     pub(super) fn new(
         url: &std::primitive::str,
         location_house: std::option::Option<longitude::Location>,
-        square_meters_house: std::option::Option<std::primitive::f64>,
-        square_meters_total: std::option::Option<std::primitive::f64>,
+        square_meters_house: std::option::Option<std::primitive::u16>,
+        square_meters_total: std::option::Option<std::primitive::u16>,
         euros: std::option::Option<std::primitive::u32>,
         street_address: &std::primitive::str,
         year: std::option::Option<std::primitive::u16>,
@@ -98,7 +98,7 @@ impl House {
     pub(self) async fn biking_km_to_location(
         &mut self,
     ) -> std::result::Result<
-        std::option::Option<std::primitive::f64>,
+        std::option::Option<std::primitive::u16>,
         crate::open_route_service::Error,
     > {
         if self.biking_km_to_location.is_none() {
@@ -125,11 +125,11 @@ impl House {
     ) -> std::result::Result<std::primitive::bool, crate::open_route_service::Error> {
         // Check area.
         if let Some(square_meters_house) = self.square_meters_house {
-            if square_meters_house < 40.0 {
+            if square_meters_house < 40 {
                 return Ok(false);
             }
         } else if let Some(square_meters_total) = self.square_meters_total {
-            if square_meters_total < 40.0 {
+            if square_meters_total < 40 {
                 return Ok(false);
             }
         }
@@ -141,7 +141,7 @@ impl House {
             }
         }
         if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
-            if 35.0 < biking_km_to_location {
+            if 35 < biking_km_to_location {
                 return Ok(false);
             }
         }
@@ -157,11 +157,6 @@ impl House {
         &mut self,
         postal_code: &std::primitive::str,
     ) -> std::result::Result<super::Result, crate::open_route_service::Error> {
-        let euros: std::option::Option<std::primitive::f64> = match self.euros {
-            Some(euros) => Some(euros as std::primitive::f64),
-            None => None,
-        };
-
         Ok(super::Result::new(
             self.url.clone(),
             match self.euros {
@@ -169,23 +164,29 @@ impl House {
                 None => None,
             },
             self.square_meters_house,
-            match euros {
+            match self.euros {
                 Some(euros) => match self.square_meters_house {
-                    Some(square_meters_house) => Some(euros / square_meters_house),
+                    Some(square_meters_house) => {
+                        Some(euros / square_meters_house as std::primitive::u32)
+                    }
                     None => None,
                 },
                 None => None,
             },
             self.square_meters_total,
-            match euros {
+            match self.euros {
                 Some(euros) => match self.square_meters_total {
-                    Some(square_meters_total) => Some(euros / square_meters_total),
+                    Some(square_meters_total) => {
+                        Some(euros / square_meters_total as std::primitive::u32)
+                    }
                     None => None,
                 },
                 None => None,
             },
             match self.distance_to_location() {
-                Some(distance_to_location) => Some(distance_to_location.kilometers()),
+                Some(distance_to_location) => {
+                    Some(distance_to_location.kilometers().ceil() as std::primitive::u16)
+                }
                 None => None,
             },
             self.biking_km_to_location().await?,

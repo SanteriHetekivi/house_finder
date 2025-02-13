@@ -36,7 +36,7 @@ impl OpenRouteService {
         &self,
         from: longitude::Location,
         to: longitude::Location,
-    ) -> std::result::Result<std::primitive::f64, crate::client::JSONError> {
+    ) -> std::result::Result<std::primitive::u16, crate::client::JSONError> {
         Ok(crate::client::Client::new(
             // Always caching cycling directions, because the API is rate limited and they should not change.
             Some("open_route_service/directions/cycling-regular"),
@@ -66,6 +66,7 @@ impl OpenRouteService {
         .await?
         .routes[0]
             .summary
-            .distance)
+            .distance
+            .ceil() as std::primitive::u16)
     }
 }
