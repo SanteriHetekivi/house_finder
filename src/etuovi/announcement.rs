@@ -64,9 +64,11 @@ impl Announcement {
     ) -> std::result::Result<std::string::String, super::RegexError> {
         Ok(regex::Regex::new(r#""postCode":"([0-9]{5})""#)?
             .captures(&self.html(cache).await?)
-            .unwrap()
+            .ok_or(regex::Error::Syntax(
+                "No postal code capture group".to_string(),
+            ))?
             .get(1)
-            .unwrap()
+            .ok_or(regex::Error::Syntax("No capture group 1".to_string()))?
             .as_str()
             .to_string())
     }
@@ -95,5 +97,28 @@ impl Announcement {
         .await?;
         self.html = Some(html.clone());
         return Ok(html);
+    }
+
+    /// Number of floors.
+    ///
+    /// # Arguments
+    /// * `cache` - Use cache for HTTP request?
+    pub(crate) async fn floors(
+        &mut self,
+        cache: std::primitive::bool,
+    ) -> std::result::Result<std::option::Option<std::primitive::u8>, super::RegexError> {
+        let html: std::string::String = self.html(cache).await?;
+        let capture: std::option::Option<regex::Captures<'_>> =
+            regex::Regex::new(r#""floorCount":([0-9]),"#)?.captures(&html);
+        match capture {
+            None => Ok(None),
+            Some(captures) => Ok(Some(
+                captures
+                    .get(1)
+                    .ok_or(regex::Error::Syntax("No capture group 1".to_string()))?
+                    .as_str()
+                    .parse::<std::primitive::u8>()?,
+            )),
+        }
     }
 }

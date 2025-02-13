@@ -2,6 +2,7 @@
 pub(super) struct Result {
     pub(self) url: std::string::String,
     pub(self) thousands_of_euros: std::option::Option<std::primitive::u32>,
+    pub(self) floors: std::option::Option<std::primitive::u8>,
     pub(self) square_meters_house: std::option::Option<std::primitive::u16>,
     pub(self) euros_per_square_meter_house: std::option::Option<std::primitive::u32>,
     pub(self) square_meters_total: std::option::Option<std::primitive::u16>,
@@ -22,6 +23,7 @@ pub(self) struct FieldInfo {
 pub(self) struct FieldToInfo {
     pub(self) url: FieldInfo,
     pub(self) thousands_of_euros: FieldInfo,
+    pub(self) floors: FieldInfo,
     pub(self) square_meters_house: FieldInfo,
     pub(self) euros_per_square_meter_house: FieldInfo,
     pub(self) square_meters_total: FieldInfo,
@@ -41,6 +43,10 @@ const FIELD_TO_INFO: FieldToInfo = FieldToInfo {
     thousands_of_euros: FieldInfo {
         title: "Price",
         unit: Some("k€"),
+    },
+    floors: FieldInfo {
+        title: "Floors",
+        unit: None,
     },
     square_meters_house: FieldInfo {
         title: "Area (house)",
@@ -82,6 +88,7 @@ impl Result {
     /// # Arguments
     /// * `url` - URL.
     /// * `thousands_of_euros` - Optional price in thousands of euros.
+    /// * `floors` - Optional number of floors.
     /// * `square_meters_house` - Optional square meters for the house.
     /// * `euros_per_square_meter_house` - Optional price per square meter for the house.
     /// * `square_meters_total` - Optional total square meters.
@@ -93,6 +100,7 @@ impl Result {
     pub(super) fn new(
         url: std::string::String,
         thousands_of_euros: std::option::Option<std::primitive::u32>,
+        floors: std::option::Option<std::primitive::u8>,
         square_meters_house: std::option::Option<std::primitive::u16>,
         euros_per_square_meter_house: std::option::Option<std::primitive::u32>,
         square_meters_total: std::option::Option<std::primitive::u16>,
@@ -113,6 +121,7 @@ impl Result {
             km_to_location_biking,
             year,
             internets,
+            floors,
         }
     }
 
@@ -143,6 +152,13 @@ impl Result {
             message.push_str(&Self::message_line(
                 FIELD_TO_INFO.thousands_of_euros,
                 thousands_of_euros.to_string(),
+            ));
+        }
+
+        if let Some(floors) = self.floors {
+            message.push_str(&Self::message_line(
+                FIELD_TO_INFO.floors,
+                floors.to_string(),
             ));
         }
 
@@ -221,10 +237,11 @@ impl Result {
     }
 
     /// Generate CSV title row.
-    pub(super) fn csv_title_row() -> [std::string::String; 10] {
+    pub(super) fn csv_title_row() -> [std::string::String; 11] {
         [
             Self::csv_title_row_cell(FIELD_TO_INFO.url),
             Self::csv_title_row_cell(FIELD_TO_INFO.thousands_of_euros),
+            Self::csv_title_row_cell(FIELD_TO_INFO.floors),
             Self::csv_title_row_cell(FIELD_TO_INFO.square_meters_house),
             Self::csv_title_row_cell(FIELD_TO_INFO.euros_per_square_meter_house),
             Self::csv_title_row_cell(FIELD_TO_INFO.square_meters_total),
@@ -237,11 +254,15 @@ impl Result {
     }
 
     /// Generate CSV row.
-    pub(super) fn csv_row(&self) -> [std::string::String; 10] {
+    pub(super) fn csv_row(&self) -> [std::string::String; 11] {
         [
             self.url.clone(),
             match self.thousands_of_euros {
                 Some(thousands_of_euros) => thousands_of_euros.to_string(),
+                None => "".to_string(),
+            },
+            match self.floors {
+                Some(floors) => floors.to_string(),
                 None => "".to_string(),
             },
             match self.square_meters_house {
@@ -301,7 +322,10 @@ impl Result {
                 )
             ))
             .to_str()
-            .unwrap()
+            .ok_or(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Failed to convert CSV path to string.",
+            ))?
             .to_string();
 
         let mut writer: csv::Writer<std::fs::File> = csv::Writer::from_writer(

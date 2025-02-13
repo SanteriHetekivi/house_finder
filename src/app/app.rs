@@ -204,7 +204,10 @@ pub(self) async fn etuovi_announcement(
 
     return Ok(Some(
         house
-            .result(&announcement.postal_code(cache_etuovi_html).await?)
+            .result(
+                &announcement.postal_code(cache_etuovi_html).await?,
+                announcement.floors(cache_etuovi_html).await?,
+            )
             .await?,
     ));
 }

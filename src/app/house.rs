@@ -176,6 +176,7 @@ impl House {
     pub(super) async fn result(
         &mut self,
         postal_code: &std::primitive::str,
+        floors: std::option::Option<std::primitive::u8>,
     ) -> std::result::Result<super::Result, crate::open_route_service::Error> {
         Ok(super::Result::new(
             self.url.clone(),
@@ -183,6 +184,7 @@ impl House {
                 Some(euros) => Some(euros / 1000),
                 None => None,
             },
+            floors,
             self.square_meters_house,
             match self.euros {
                 Some(euros) => match self.square_meters_house {

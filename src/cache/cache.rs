@@ -19,7 +19,10 @@ impl Cache {
         let dir: std::string::String = exe_dir
             .join(format!("cache/{}", name))
             .to_str()
-            .unwrap()
+            .ok_or(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Could not convert cache path to string",
+            ))?
             .to_string();
         std::fs::create_dir_all(dir.clone())?;
         Ok(Self {
