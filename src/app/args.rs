@@ -60,4 +60,14 @@ pub(crate) struct Args {
     // Minimun area (m²) of the house.
     #[arg(long, action, help = "Minimum area (m²) of the house.")]
     pub(super) house_min_square_meters: Option<std::primitive::u16>,
+
+    // Maximun distance to house from location in kilometers.
+    #[arg(
+        long,
+        action,
+        help = "Maximun distance to house from location in kilometers.",
+        requires = "location_longitude",
+        requires = "location_latitude"
+    )]
+    pub(super) max_distance_km: Option<std::primitive::u16>,
 }

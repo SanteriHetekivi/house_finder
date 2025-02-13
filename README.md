@@ -11,6 +11,8 @@ For example:
 ./target/release/house_finder \
   --publishing-time-search-criteria=WITHIN_ONE_DAY \
   --price_max=1000000 \
+  --house-min-square-meters=100 \
+  --max-distance-km=50 \
   --cities=FI_UUSIMAA_ESPOO \
   --cities=FI_UUSIMAA_HELSINKI \
   --location-latitude=<LOCATION-LATITUDE> \
@@ -35,6 +37,7 @@ For example:
 - `--cache-etuovi-announcements` - (Optional) If given stores all of Etuovi announcement search request data to cache directory in same directory as executable.
 - `--cache-etuovi-html` - (Optional) If given stores all of Etuovi property page HTML to cache directory in same directory as executable.
 - `--house-min-square-meters` - (Optional) If given, only get houses that are bigger than this. Only if house or total area are given. Compare with total area only if house area is not given.
+- `--max-distance-km` - (Optional) (Requires: --location-latitude and --location-longitude) If given, only get houses that have at most this amount of kilometers from house. If --open-route-service-token given, uses biking distance, else uses straight line.
 
 ## Info
 

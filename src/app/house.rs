@@ -12,6 +12,7 @@ pub(crate) struct House {
     pub(self) cache_elisa_fixed_broadband_products: std::primitive::bool,
     pub(self) biking_km_to_location: std::option::Option<std::primitive::u16>,
     pub(self) house_min_square_meters: std::option::Option<std::primitive::u16>,
+    pub(super) max_distance_km: std::option::Option<std::primitive::u16>,
 }
 
 impl House {
@@ -27,7 +28,9 @@ impl House {
     /// * `year` - Optional construction year.
     /// * `location_comparison` - Location for the location.
     /// * `open_route_service_token` - Open Route Service key.
-    /// * `cache_elisa_fixed_broadband_products` - Use cache when getting Elisa fixed broadband products??
+    /// * `cache_elisa_fixed_broadband_products` - Use cache when getting Elisa fixed broadband products?
+    /// * `house_min_square_meters` - Optional minimum area in square meters of the house.
+    /// * `max_distance_km` - Optional maximum distance in kilometers to the location.
     pub(super) fn new(
         url: &std::primitive::str,
         location_house: std::option::Option<longitude::Location>,
@@ -40,6 +43,7 @@ impl House {
         open_route_service_token: std::option::Option<std::string::String>,
         cache_elisa_fixed_broadband_products: std::primitive::bool,
         house_min_square_meters: std::option::Option<std::primitive::u16>,
+        max_distance_km: std::option::Option<std::primitive::u16>,
     ) -> Self {
         Self {
             url: url.to_string(),
@@ -54,6 +58,7 @@ impl House {
             cache_elisa_fixed_broadband_products,
             biking_km_to_location: None,
             house_min_square_meters,
+            max_distance_km,
         }
     }
 
@@ -140,14 +145,17 @@ impl House {
         }
 
         // Check distance.
-        if let Some(distance_to_location) = self.distance_to_location() {
-            if 35.0 < distance_to_location.kilometers() {
-                return Ok(false);
+        if let Some(max_distance_km) = self.max_distance_km {
+            if let Some(distance_to_location) = self.distance_to_location() {
+                if max_distance_km < distance_to_location.kilometers().ceil() as std::primitive::u16
+                {
+                    return Ok(false);
+                }
             }
-        }
-        if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
-            if 35 < biking_km_to_location {
-                return Ok(false);
+            if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
+                if max_distance_km < biking_km_to_location {
+                    return Ok(false);
+                }
             }
         }
 
