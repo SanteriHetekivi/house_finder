@@ -68,7 +68,9 @@ impl Announcement {
                 "No postal code capture group".to_string(),
             ))?
             .get(1)
-            .ok_or(regex::Error::Syntax("No capture group 1".to_string()))?
+            .ok_or(regex::Error::Syntax(
+                "No capture group 1 for postal code".to_string(),
+            ))?
             .as_str()
             .to_string())
     }
@@ -115,10 +117,31 @@ impl Announcement {
             Some(captures) => Ok(Some(
                 captures
                     .get(1)
-                    .ok_or(regex::Error::Syntax("No capture group 1".to_string()))?
+                    .ok_or(regex::Error::Syntax(
+                        "No capture group 1 for floorCount".to_string(),
+                    ))?
                     .as_str()
                     .parse::<std::primitive::u8>()?,
             )),
         }
+    }
+
+    /// Text for the announcement.
+    ///
+    /// # Arguments
+    /// * `cache` - Use cache for HTTP request?
+    pub(crate) async fn text(
+        &mut self,
+        cache: std::primitive::bool,
+    ) -> std::result::Result<std::string::String, super::RegexError> {
+        Ok(regex::Regex::new(r#""text":"(.*?)","#)?
+            .captures(&self.html(cache).await?)
+            .ok_or(regex::Error::Syntax("No text capture group".to_string()))?
+            .get(1)
+            .ok_or(regex::Error::Syntax(
+                "No capture group 1 for text".to_string(),
+            ))?
+            .as_str()
+            .to_string())
     }
 }

@@ -169,6 +169,27 @@ impl House {
         return Ok(true);
     }
 
+    /// Has invalid text?
+    ///
+    /// # Arguments
+    /// * `text` - Text to check.
+    /// * `exclude_texts` - Invalid texts that, if given text has, do not include it.
+    pub(super) fn has_invalid_text(
+        text: &std::primitive::str,
+        exclude_texts: std::vec::Vec<std::string::String>,
+    ) -> bool {
+        if exclude_texts.is_empty() {
+            return false;
+        }
+        let text_lowercase: std::string::String = text.to_lowercase();
+        for invalid_text in &exclude_texts {
+            if text_lowercase.contains(invalid_text) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// Result for the house.
     ///
     /// # Arguments

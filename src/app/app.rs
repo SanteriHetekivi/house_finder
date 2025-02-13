@@ -40,6 +40,11 @@ pub(crate) async fn run(
         args.house_min_square_meters;
     let max_distance_km: std::option::Option<std::primitive::u16> = args.max_distance_km;
     let min_mbps: std::option::Option<std::primitive::u32> = args.min_mbps;
+    let exclude_texts: std::vec::Vec<std::string::String> = args
+        .exclude_texts
+        .iter()
+        .map(|text| text.to_lowercase())
+        .collect();
     handles.push(tokio::task::spawn(async move {
         etuovi(
             &args.publishing_time_search_criteria,
@@ -53,6 +58,7 @@ pub(crate) async fn run(
             house_min_square_meters,
             max_distance_km,
             min_mbps,
+            exclude_texts,
         )
         .await
     }));
@@ -108,6 +114,10 @@ pub(crate) async fn run(
 /// * `open_route_service_token` - Optional OpenRouteService authorization token: https://openrouteservice.org/sign-up/
 /// * `price_max` - Optional maximum price.
 /// * `cities` - Cities.
+/// * `house_min_square_meters` - Optional minimum square meters for the house.
+/// * `max_distance_km` - Optional maximum distance in kilometers.
+/// * `min_mbps` - Optional minimum megabits per second.
+/// * `exclude_texts` - Exclude house if it's text data has one of these texts.
 pub(self) async fn etuovi(
     publishing_time_search_criteria: &std::primitive::str,
     location_comparison: std::option::Option<longitude::Location>,
@@ -120,6 +130,7 @@ pub(self) async fn etuovi(
     house_min_square_meters: std::option::Option<std::primitive::u16>,
     max_distance_km: std::option::Option<std::primitive::u16>,
     min_mbps: std::option::Option<std::primitive::u32>,
+    exclude_texts: std::vec::Vec<std::string::String>,
 ) -> std::result::Result<std::vec::Vec<super::Result>, super::Error> {
     let mut handles: std::vec::Vec<
         tokio::task::JoinHandle<std::result::Result<Option<super::Result>, super::Error>>,
@@ -141,6 +152,7 @@ pub(self) async fn etuovi(
             location_comparison.clone();
         let open_route_service_token: std::option::Option<std::string::String> =
             open_route_service_token.clone();
+        let exclude_texts: std::vec::Vec<std::string::String> = exclude_texts.clone();
         handles.push(tokio::task::spawn(async move {
             etuovi_announcement(
                 announcement,
@@ -151,6 +163,7 @@ pub(self) async fn etuovi(
                 house_min_square_meters,
                 max_distance_km,
                 min_mbps,
+                exclude_texts,
             )
             .await
         }));
@@ -172,6 +185,10 @@ pub(self) async fn etuovi(
 /// * `location_comparison` - Optional location_comparison to compare against.
 /// * `cache` - Cache data that can be changed?
 /// * `open_route_service_token` - OpenRouteService authorization token: https://openrouteservice.org/sign-up/
+/// * `house_min_square_meters` - Optional minimum square meters for the house.
+/// * `max_distance_km` - Optional maximum distance in kilometers.
+/// * `min_mbps` - Optional minimum megabits per second.
+/// * `exclude_texts` - Exclude house if it's text data has one of these texts.
 pub(self) async fn etuovi_announcement(
     mut announcement: crate::etuovi::Announcement,
     location_comparison: std::option::Option<longitude::Location>,
@@ -181,6 +198,7 @@ pub(self) async fn etuovi_announcement(
     house_min_square_meters: std::option::Option<std::primitive::u16>,
     max_distance_km: std::option::Option<std::primitive::u16>,
     min_mbps: std::option::Option<std::primitive::u32>,
+    exclude_texts: std::vec::Vec<std::string::String>,
 ) -> std::result::Result<Option<super::Result>, super::Error> {
     let mut house: crate::app::house::House = crate::app::House::new(
         &announcement.url(),
@@ -199,6 +217,13 @@ pub(self) async fn etuovi_announcement(
     );
 
     if !house.include().await? {
+        return Ok(None);
+    }
+
+    if crate::app::House::has_invalid_text(
+        &announcement.text(cache_etuovi_html).await?,
+        exclude_texts,
+    ) {
         return Ok(None);
     }
 

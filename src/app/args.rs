@@ -74,4 +74,8 @@ pub(crate) struct Args {
     // Minimum megabits per second for the internet.
     #[arg(long, action, help = "Minimum megabits per second for the internet.")]
     pub(super) min_mbps: Option<std::primitive::u32>,
+
+    // Exclude house if it's text data has one of these texts.
+    #[arg(long, help = "Exclude house if it's text data has one of these texts.")]
+    pub(super) exclude_texts: Vec<std::string::String>,
 }
