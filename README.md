@@ -13,6 +13,7 @@ For example:
   --price_max=1000000 \
   --house-min-square-meters=100 \
   --max-distance-km=50 \
+  --min-mbps=1000 \
   --cities=FI_UUSIMAA_ESPOO \
   --cities=FI_UUSIMAA_HELSINKI \
   --location-latitude=<LOCATION-LATITUDE> \
@@ -38,6 +39,7 @@ For example:
 - `--cache-etuovi-html` - (Optional) If given stores all of Etuovi property page HTML to cache directory in same directory as executable.
 - `--house-min-square-meters` - (Optional) If given, only get houses that are bigger than this. Only if house or total area are given. Compare with total area only if house area is not given.
 - `--max-distance-km` - (Optional) (Requires: --location-latitude and --location-longitude) If given, only get houses that have at most this amount of kilometers from house. If --open-route-service-token given, uses biking distance, else uses straight line.
+- `--min-mbps` - (Optional) If given limit to internet services that have speed in mbps 0 or under this.
 
 ## Info
 

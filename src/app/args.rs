@@ -70,4 +70,8 @@ pub(crate) struct Args {
         requires = "location_latitude"
     )]
     pub(super) max_distance_km: Option<std::primitive::u16>,
+
+    // Minimum megabits per second for the internet.
+    #[arg(long, action, help = "Minimum megabits per second for the internet.")]
+    pub(super) min_mbps: Option<std::primitive::u32>,
 }

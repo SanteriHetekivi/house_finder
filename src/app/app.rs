@@ -39,6 +39,7 @@ pub(crate) async fn run(
     let house_min_square_meters: std::option::Option<std::primitive::u16> =
         args.house_min_square_meters;
     let max_distance_km: std::option::Option<std::primitive::u16> = args.max_distance_km;
+    let min_mbps: std::option::Option<std::primitive::u32> = args.min_mbps;
     handles.push(tokio::task::spawn(async move {
         etuovi(
             &args.publishing_time_search_criteria,
@@ -51,6 +52,7 @@ pub(crate) async fn run(
             cities,
             house_min_square_meters,
             max_distance_km,
+            min_mbps,
         )
         .await
     }));
@@ -117,6 +119,7 @@ pub(self) async fn etuovi(
     cities: std::vec::Vec<std::string::String>,
     house_min_square_meters: std::option::Option<std::primitive::u16>,
     max_distance_km: std::option::Option<std::primitive::u16>,
+    min_mbps: std::option::Option<std::primitive::u32>,
 ) -> std::result::Result<std::vec::Vec<super::Result>, super::Error> {
     let mut handles: std::vec::Vec<
         tokio::task::JoinHandle<std::result::Result<Option<super::Result>, super::Error>>,
@@ -147,6 +150,7 @@ pub(self) async fn etuovi(
                 open_route_service_token,
                 house_min_square_meters,
                 max_distance_km,
+                min_mbps,
             )
             .await
         }));
@@ -176,6 +180,7 @@ pub(self) async fn etuovi_announcement(
     open_route_service_token: std::option::Option<std::string::String>,
     house_min_square_meters: std::option::Option<std::primitive::u16>,
     max_distance_km: std::option::Option<std::primitive::u16>,
+    min_mbps: std::option::Option<std::primitive::u32>,
 ) -> std::result::Result<Option<super::Result>, super::Error> {
     let mut house: crate::app::house::House = crate::app::House::new(
         &announcement.url(),
@@ -190,6 +195,7 @@ pub(self) async fn etuovi_announcement(
         cache_elisa_fixed_broadband_products,
         house_min_square_meters,
         max_distance_km,
+        min_mbps,
     );
 
     if !house.include().await? {

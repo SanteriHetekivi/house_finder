@@ -12,7 +12,8 @@ pub(crate) struct House {
     pub(self) cache_elisa_fixed_broadband_products: std::primitive::bool,
     pub(self) biking_km_to_location: std::option::Option<std::primitive::u16>,
     pub(self) house_min_square_meters: std::option::Option<std::primitive::u16>,
-    pub(super) max_distance_km: std::option::Option<std::primitive::u16>,
+    pub(self) max_distance_km: std::option::Option<std::primitive::u16>,
+    pub(self) min_mbps: std::option::Option<std::primitive::u32>,
 }
 
 impl House {
@@ -31,6 +32,7 @@ impl House {
     /// * `cache_elisa_fixed_broadband_products` - Use cache when getting Elisa fixed broadband products?
     /// * `house_min_square_meters` - Optional minimum area in square meters of the house.
     /// * `max_distance_km` - Optional maximum distance in kilometers to the location.
+    /// * `min_mbps` - Optional minimum megabits per second for the internet.
     pub(super) fn new(
         url: &std::primitive::str,
         location_house: std::option::Option<longitude::Location>,
@@ -44,6 +46,7 @@ impl House {
         cache_elisa_fixed_broadband_products: std::primitive::bool,
         house_min_square_meters: std::option::Option<std::primitive::u16>,
         max_distance_km: std::option::Option<std::primitive::u16>,
+        min_mbps: std::option::Option<std::primitive::u32>,
     ) -> Self {
         Self {
             url: url.to_string(),
@@ -59,6 +62,7 @@ impl House {
             biking_km_to_location: None,
             house_min_square_meters,
             max_distance_km,
+            min_mbps,
         }
     }
 
@@ -91,13 +95,16 @@ impl House {
         .products()
         {
             let mbps: std::primitive::u32 = elisa_product.mbps();
-            if mbps == 0 || 100 < mbps {
-                internets.push(super::Internet {
-                    name: elisa_product.name(),
-                    euros_per_month: elisa_product.euros_per_month(),
-                    mbps: elisa_product.mbps(),
-                });
+            if let Some(min_mbps) = self.min_mbps {
+                if mbps != 0 && mbps < min_mbps {
+                    continue;
+                }
             }
+            internets.push(super::Internet {
+                name: elisa_product.name(),
+                euros_per_month: elisa_product.euros_per_month(),
+                mbps,
+            });
         }
         return Ok(internets);
     }
