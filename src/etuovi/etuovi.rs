@@ -1,6 +1,7 @@
 /// Etuovi.com API.
 pub(crate) struct Etuovi {
     pub(self) client: crate::client::Client<crate::client::BetweenCalls>,
+    pub(self) cache_html: std::primitive::bool,
     pub(self) publishing_time_search_criteria: std::string::String,
     pub(self) price_max: std::option::Option<std::primitive::u32>,
     pub(self) cities: std::vec::Vec<std::string::String>,
@@ -10,12 +11,14 @@ impl Etuovi {
     /// Create new Etuovi API instance.
     ///
     /// # Arguments
-    /// * `cache` - Use cache?
+    /// * `cache_announcements` - Cache announcements?
+    /// * `cache_html` - Cache HTML?
     /// * `publishing_time_search_criteria` - Search criteria for publishing time. One of: ANY_DAY, WITHIN_ONE_DAY, WITHIN_TWO_DAYS, WITHIN_SEVEN_DAYS, WITHIN_TWO_WEEKS.
     /// * `price_max` - Max price in euros.
     /// * `cities` - Cities.
     pub(crate) fn new(
         cache_announcements: std::primitive::bool,
+        cache_html: std::primitive::bool,
         publishing_time_search_criteria: &std::primitive::str,
         price_max: std::option::Option<std::primitive::u32>,
         cities: std::vec::Vec<std::string::String>,
@@ -29,6 +32,7 @@ impl Etuovi {
                 },
                 Some(std::sync::Arc::clone(&super::LIMITER)),
             )?,
+            cache_html,
             publishing_time_search_criteria: publishing_time_search_criteria.to_string(),
             price_max,
             cities,
@@ -93,8 +97,8 @@ impl Etuovi {
                 .announcements_page(classified_location_terms.clone(), page)
                 .await?;
             let mut added: std::primitive::bool = false;
-            for announcement in response.announcements {
-                announcements.push(announcement);
+            for announcement_raw in response.announcements {
+                announcements.push(super::Announcement::new(announcement_raw, self.cache_html));
                 if !added {
                     added = true;
                 }

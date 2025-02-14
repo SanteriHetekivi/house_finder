@@ -139,6 +139,7 @@ pub(self) async fn etuovi(
     >::new();
     for announcement in crate::etuovi::Etuovi::new(
         cache_etuovi_announcements,
+        cache_etuovi_html,
         publishing_time_search_criteria,
         price_max,
         cities,
@@ -157,7 +158,6 @@ pub(self) async fn etuovi(
             etuovi_announcement(
                 announcement,
                 location_comparison,
-                cache_etuovi_html,
                 cache_elisa_fixed_broadband_products,
                 open_route_service_token,
                 house_min_square_meters,
@@ -183,16 +183,15 @@ pub(self) async fn etuovi(
 /// # Arguments
 /// * `announcement` - Etuovi announcement.
 /// * `location_comparison` - Optional location_comparison to compare against.
-/// * `cache` - Cache data that can be changed?
+/// * `cache_elisa_fixed_broadband_products` - Cache Elisa fixed broadband products?
 /// * `open_route_service_token` - OpenRouteService authorization token: https://openrouteservice.org/sign-up/
 /// * `house_min_square_meters` - Optional minimum square meters for the house.
 /// * `max_distance_km` - Optional maximum distance in kilometers.
 /// * `min_mbps` - Optional minimum megabits per second.
 /// * `exclude_texts` - Exclude house if it's text data has one of these texts.
 pub(self) async fn etuovi_announcement(
-    mut announcement: crate::etuovi::Announcement,
+    announcement: crate::etuovi::Announcement,
     location_comparison: std::option::Option<longitude::Location>,
-    cache_etuovi_html: std::primitive::bool,
     cache_elisa_fixed_broadband_products: std::primitive::bool,
     open_route_service_token: std::option::Option<std::string::String>,
     house_min_square_meters: std::option::Option<std::primitive::u16>,
@@ -200,39 +199,16 @@ pub(self) async fn etuovi_announcement(
     min_mbps: std::option::Option<std::primitive::u32>,
     exclude_texts: std::vec::Vec<std::string::String>,
 ) -> std::result::Result<Option<super::Result>, super::Error> {
-    let mut house: crate::app::house::House = crate::app::House::new(
-        &announcement.url(),
-        announcement.location(),
-        announcement.square_meters_house(),
-        announcement.square_meters_total(),
-        announcement.euros(),
-        &announcement.street_address(),
-        announcement.year(),
+    return Ok(crate::app::House::<crate::etuovi::Announcement>::new(
+        announcement,
         location_comparison.clone(),
         open_route_service_token,
         cache_elisa_fixed_broadband_products,
         house_min_square_meters,
         max_distance_km,
         min_mbps,
-    );
-
-    if !house.include().await? {
-        return Ok(None);
-    }
-
-    if crate::app::House::has_invalid_text(
-        &announcement.text(cache_etuovi_html).await?,
         exclude_texts,
-    ) {
-        return Ok(None);
-    }
-
-    return Ok(Some(
-        house
-            .result(
-                &announcement.postal_code(cache_etuovi_html).await?,
-                announcement.floors(cache_etuovi_html).await?,
-            )
-            .await?,
-    ));
+    )
+    .result()
+    .await?);
 }

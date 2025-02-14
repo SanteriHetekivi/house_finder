@@ -1,12 +1,6 @@
 /// House to buy.
-pub(crate) struct House {
-    pub(self) url: std::string::String,
-    pub(self) location_house: std::option::Option<longitude::Location>,
-    pub(self) square_meters_house: std::option::Option<std::primitive::u16>,
-    pub(self) square_meters_total: std::option::Option<std::primitive::u16>,
-    pub(self) euros: std::option::Option<std::primitive::u32>,
-    pub(self) street_address: std::string::String,
-    pub(self) year: std::option::Option<std::primitive::u16>,
+pub(crate) struct House<A: super::Announcement> {
+    pub(self) announcement: A,
     pub(self) location_comparison: std::option::Option<longitude::Location>,
     pub(self) open_route_service_token: std::option::Option<std::string::String>,
     pub(self) cache_elisa_fixed_broadband_products: std::primitive::bool,
@@ -14,48 +8,33 @@ pub(crate) struct House {
     pub(self) house_min_square_meters: std::option::Option<std::primitive::u16>,
     pub(self) max_distance_km: std::option::Option<std::primitive::u16>,
     pub(self) min_mbps: std::option::Option<std::primitive::u32>,
+    pub(self) exclude_texts: std::vec::Vec<std::string::String>,
 }
 
-impl House {
+impl<A: super::Announcement> House<A> {
     /// Initilizes house.
     ///
     /// # Arguments
-    /// * `url` - URL for the house.
-    /// * `location` - Optional location for the house.
-    /// * `square_meters_house` - Optional square meters for the house.
-    /// * `square_meters_total` - Optional total square meters for the whole property.
-    /// * `euros` - Price in euros.
-    /// * `street_address` - Street address.
-    /// * `year` - Optional construction year.
+    /// * `announcement` - Announcement for the house.
     /// * `location_comparison` - Location for the location.
     /// * `open_route_service_token` - Open Route Service key.
     /// * `cache_elisa_fixed_broadband_products` - Use cache when getting Elisa fixed broadband products?
     /// * `house_min_square_meters` - Optional minimum area in square meters of the house.
     /// * `max_distance_km` - Optional maximum distance in kilometers to the location.
     /// * `min_mbps` - Optional minimum megabits per second for the internet.
+    /// * `exclude_texts` - Exclude house if it's text data has one of these texts.
     pub(super) fn new(
-        url: &std::primitive::str,
-        location_house: std::option::Option<longitude::Location>,
-        square_meters_house: std::option::Option<std::primitive::u16>,
-        square_meters_total: std::option::Option<std::primitive::u16>,
-        euros: std::option::Option<std::primitive::u32>,
-        street_address: &std::primitive::str,
-        year: std::option::Option<std::primitive::u16>,
+        announcement: A,
         location_comparison: std::option::Option<longitude::Location>,
         open_route_service_token: std::option::Option<std::string::String>,
         cache_elisa_fixed_broadband_products: std::primitive::bool,
         house_min_square_meters: std::option::Option<std::primitive::u16>,
         max_distance_km: std::option::Option<std::primitive::u16>,
         min_mbps: std::option::Option<std::primitive::u32>,
+        exclude_texts: std::vec::Vec<std::string::String>,
     ) -> Self {
         Self {
-            url: url.to_string(),
-            location_house,
-            square_meters_house,
-            square_meters_total,
-            euros,
-            street_address: street_address.to_string(),
-            year,
+            announcement,
             location_comparison,
             open_route_service_token,
             cache_elisa_fixed_broadband_products,
@@ -63,13 +42,14 @@ impl House {
             house_min_square_meters,
             max_distance_km,
             min_mbps,
+            exclude_texts,
         }
     }
 
     /// Distance to location directly.
     pub(self) fn distance_to_location(&self) -> std::option::Option<longitude::Distance> {
         if let Some(location_comparison) = &self.location_comparison {
-            if let Some(location_house) = &self.location_house {
+            if let Some(location_house) = &self.announcement.location() {
                 return Some(location_house.distance(location_comparison));
             }
         }
@@ -88,7 +68,7 @@ impl House {
         let mut internets: std::vec::Vec<super::Internet> = std::vec::Vec::<super::Internet>::new();
         for elisa_product in crate::elisa::Elisa::new(
             postal_code,
-            &self.street_address,
+            &self.announcement.street_address(),
             self.cache_elisa_fixed_broadband_products,
         )
         .await?
@@ -119,7 +99,7 @@ impl House {
         if self.biking_km_to_location.is_none() {
             if let Some(location_comparison) = &self.location_comparison {
                 if let Some(open_route_service_token) = &self.open_route_service_token {
-                    if let Some(location) = &self.location_house {
+                    if let Some(location) = &self.announcement.location() {
                         self.biking_km_to_location = Some(
                             crate::open_route_service::OpenRouteService::new(
                                 open_route_service_token,
@@ -135,16 +115,16 @@ impl House {
     }
 
     /// Include house as one of the options?
-    pub(super) async fn include(
+    pub(self) async fn include(
         &mut self,
-    ) -> std::result::Result<std::primitive::bool, crate::open_route_service::Error> {
+    ) -> std::result::Result<std::primitive::bool, super::Error> {
         // Check area.
         if let Some(house_min_square_meters) = self.house_min_square_meters {
-            if let Some(square_meters_house) = self.square_meters_house {
+            if let Some(square_meters_house) = self.announcement.square_meters_house() {
                 if square_meters_house < house_min_square_meters {
                     return Ok(false);
                 }
-            } else if let Some(square_meters_total) = self.square_meters_total {
+            } else if let Some(square_meters_total) = self.announcement.square_meters_total() {
                 if square_meters_total < house_min_square_meters {
                     return Ok(false);
                 }
@@ -166,28 +146,18 @@ impl House {
             }
         }
 
-        return Ok(true);
-    }
-
-    /// Has invalid text?
-    ///
-    /// # Arguments
-    /// * `text` - Text to check.
-    /// * `exclude_texts` - Invalid texts that, if given text has, do not include it.
-    pub(super) fn has_invalid_text(
-        text: &std::primitive::str,
-        exclude_texts: std::vec::Vec<std::string::String>,
-    ) -> bool {
-        if exclude_texts.is_empty() {
-            return false;
-        }
-        let text_lowercase: std::string::String = text.to_lowercase();
-        for invalid_text in &exclude_texts {
-            if text_lowercase.contains(invalid_text) {
-                return true;
+        // Check texts.
+        if !self.exclude_texts.is_empty() {
+            let text_lowercase: std::string::String =
+                self.announcement.text().await?.to_lowercase();
+            for invalid_text in &self.exclude_texts {
+                if text_lowercase.contains(invalid_text) {
+                    return Ok(false);
+                }
             }
         }
-        return false;
+
+        return Ok(true);
     }
 
     /// Result for the house.
@@ -196,19 +166,24 @@ impl House {
     /// * `postal_code` - Postal code for the house.
     pub(super) async fn result(
         &mut self,
-        postal_code: &std::primitive::str,
-        floors: std::option::Option<std::primitive::u8>,
-    ) -> std::result::Result<super::Result, crate::open_route_service::Error> {
-        Ok(super::Result::new(
-            self.url.clone(),
-            match self.euros {
+    ) -> std::result::Result<std::option::Option<super::Result>, super::Error> {
+        if !self.include().await? {
+            return Ok(None);
+        }
+        let euros: std::option::Option<u32> = self.announcement.euros();
+        let square_meters_house: std::option::Option<u16> = self.announcement.square_meters_house();
+        let square_meters_total: std::option::Option<u16> = self.announcement.square_meters_total();
+        let postal_code: std::string::String = self.announcement.postal_code().await?;
+        Ok(Some(super::Result::new(
+            self.announcement.url().clone(),
+            match euros {
                 Some(euros) => Some(euros / 1000),
                 None => None,
             },
-            floors,
-            self.square_meters_house,
-            match self.euros {
-                Some(euros) => match self.square_meters_house {
+            self.announcement.floors().await?,
+            square_meters_house,
+            match euros {
+                Some(euros) => match square_meters_house {
                     Some(square_meters_house) => {
                         Some(euros / square_meters_house as std::primitive::u32)
                     }
@@ -216,9 +191,9 @@ impl House {
                 },
                 None => None,
             },
-            self.square_meters_total,
-            match self.euros {
-                Some(euros) => match self.square_meters_total {
+            square_meters_total,
+            match euros {
+                Some(euros) => match square_meters_total {
                     Some(square_meters_total) => {
                         Some(euros / square_meters_total as std::primitive::u32)
                     }
@@ -233,8 +208,8 @@ impl House {
                 None => None,
             },
             self.biking_km_to_location().await?,
-            self.year,
-            self.internets(postal_code).await?,
-        ))
+            self.announcement.year(),
+            self.internets(&postal_code).await?,
+        )))
     }
 }
