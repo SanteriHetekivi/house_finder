@@ -1,8 +1,9 @@
 /// Etuovi.com API.
 pub(crate) struct Etuovi {
-    pub(self) cache: std::primitive::bool,
+    pub(self) client: crate::client::Client<crate::client::BetweenCalls>,
+    pub(self) cache_html: std::primitive::bool,
     pub(self) publishing_time_search_criteria: std::string::String,
-    pub(self) price_max: std::primitive::u32,
+    pub(self) price_max: std::option::Option<std::primitive::u32>,
     pub(self) cities: std::vec::Vec<std::string::String>,
 }
 
@@ -10,29 +11,75 @@ impl Etuovi {
     /// Create new Etuovi API instance.
     ///
     /// # Arguments
-    /// * `cache` - Use cache?
+    /// * `cache_announcements` - Cache announcements?
+    /// * `cache_html` - Cache HTML?
     /// * `publishing_time_search_criteria` - Search criteria for publishing time. One of: ANY_DAY, WITHIN_ONE_DAY, WITHIN_TWO_DAYS, WITHIN_SEVEN_DAYS, WITHIN_TWO_WEEKS.
     /// * `price_max` - Max price in euros.
     /// * `cities` - Cities.
     pub(crate) fn new(
-        cache: std::primitive::bool,
-        publishing_time_search_criteria: &str,
-        price_max: std::primitive::u32,
+        cache_announcements: std::primitive::bool,
+        cache_html: std::primitive::bool,
+        publishing_time_search_criteria: &std::primitive::str,
+        price_max: std::option::Option<std::primitive::u32>,
         cities: std::vec::Vec<std::string::String>,
-    ) -> Self {
-        Self {
-            cache,
+    ) -> std::result::Result<Self, crate::client::RequestError> {
+        Ok(Self {
+            client: crate::client::Client::new(
+                if cache_announcements {
+                    Some("etuovi/announcements/search/listpage")
+                } else {
+                    None
+                },
+                Some(std::sync::Arc::clone(&super::LIMITER)),
+            )?,
+            cache_html,
             publishing_time_search_criteria: publishing_time_search_criteria.to_string(),
             price_max,
             cities,
-        }
+        })
+    }
+
+    /// Get one page of announcements.
+    ///
+    /// # Arguments
+    /// * `classified_location_terms` - Classified location terms.
+    /// * `page` - Page number.
+    pub(super) async fn announcements_page(
+        &self,
+        classified_location_terms: std::vec::Vec<serde_json::Value>,
+        page: u16,
+    ) -> std::result::Result<super::Response, crate::client::JSONError> {
+        Ok(self
+            .client
+            .post_json::<super::Response>(
+                "https://www.etuovi.com/api/v2/announcements/search/listpage",
+                serde_json::json!({
+                    "propertyType": "RESIDENTIAL",
+                    "priceMax": self.price_max,
+                    "publishingTimeSearchCriteria": self.publishing_time_search_criteria,
+                    "ownershipTypes": ["OWN"],
+                    "plotHoldingTypes": ["OWN"],
+                    "residentialPropertyTypes": ["DETACHED_HOUSE"],
+                    "locationSearchCriteria": {
+                        "classifiedLocationTerms": classified_location_terms
+                    },
+                    "pagination": {
+                        "firstResult": 30*(page-1),
+                        "maxResults": 30,
+                        "page": page,
+                    },
+                }),
+                None,
+            )
+            .await?)
     }
 
     /// Get announcements.
     pub(crate) async fn announcements(
         &self,
     ) -> std::result::Result<std::vec::Vec<super::Announcement>, crate::client::JSONError> {
-        let classified_location_terms: Vec<_> = self
+        let mut announcements: std::vec::Vec<super::Announcement> = std::vec::Vec::new();
+        let classified_location_terms: std::vec::Vec<serde_json::Value> = self
             .cities
             .iter()
             .map(|city| {
@@ -42,27 +89,26 @@ impl Etuovi {
                 })
             })
             .collect();
-        Ok(crate::client::Client::new(if self.cache {
-            Some("etuovi/announcements/search/listpage")
-        } else {
-            None
-        })?
-        .post_json::<super::Response>(
-            "https://www.etuovi.com/api/v2/announcements/search/listpage",
-            serde_json::json!({
-                "propertyType": "RESIDENTIAL",
-                "priceMax": self.price_max,
-                "publishingTimeSearchCriteria": self.publishing_time_search_criteria,
-                "ownershipTypes": ["OWN"],
-                "plotHoldingTypes": ["OWN"],
-                "residentialPropertyTypes": ["DETACHED_HOUSE"],
-                "locationSearchCriteria": {
-                    "classifiedLocationTerms": classified_location_terms
+        let mut page: std::primitive::u16 = 1;
+
+        // Loop every page.
+        loop {
+            let response: super::Response = self
+                .announcements_page(classified_location_terms.clone(), page)
+                .await?;
+            let mut added: std::primitive::bool = false;
+            for announcement_raw in response.announcements {
+                announcements.push(super::Announcement::new(announcement_raw, self.cache_html));
+                if !added {
+                    added = true;
                 }
-            }),
-            None,
-        )
-        .await?
-        .announcements)
+            }
+            if !added || response.count_of_all_results as usize <= announcements.len() {
+                break;
+            }
+            page += 1;
+        }
+
+        return Ok(announcements);
     }
 }

@@ -4,7 +4,7 @@ pub(crate) enum JSONError {
     SerdeJSONError(serde_json::Error),
 }
 impl std::fmt::Display for JSONError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             JSONError::RequestError(e) => write!(f, "Request or IO error:\n{}", e),
             JSONError::SerdeJSONError(e) => write!(f, "Serde JSON error:\n{}", e),

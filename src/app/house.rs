@@ -1,62 +1,60 @@
 /// House to buy.
-pub(crate) struct House {
-    pub(self) url: std::string::String,
-    pub(self) location: longitude::Location,
-    pub(self) square_meters_house: std::primitive::f64,
-    pub(self) square_meters_total: std::option::Option<std::primitive::f64>,
-    pub(self) euros: std::primitive::u32,
-    pub(self) street_address: std::string::String,
-    pub(self) year: std::option::Option<std::primitive::u16>,
-    pub(self) cottage_location: longitude::Location,
-    pub(self) open_route_service_token: std::string::String,
-    pub(self) cache: std::primitive::bool,
-    pub(self) biking_km_to_cottage: std::option::Option<std::primitive::f64>,
+pub(crate) struct House<A: super::Announcement> {
+    pub(self) announcement: A,
+    pub(self) location_comparison: std::option::Option<longitude::Location>,
+    pub(self) open_route_service_token: std::option::Option<std::string::String>,
+    pub(self) cache_elisa_fixed_broadband_products: std::primitive::bool,
+    pub(self) biking_km_to_location: std::option::Option<std::primitive::u16>,
+    pub(self) house_min_square_meters: std::option::Option<std::primitive::u16>,
+    pub(self) max_distance_km: std::option::Option<std::primitive::u16>,
+    pub(self) min_mbps: std::option::Option<std::primitive::u32>,
+    pub(self) exclude_texts: std::vec::Vec<std::string::String>,
 }
 
-impl House {
+impl<A: super::Announcement> House<A> {
     /// Initilizes house.
     ///
     /// # Arguments
-    /// * `url` - URL for the house.
-    /// * `location` - Location for the house.
-    /// * `square_meters_house` - Square meters for the house.
-    /// * `square_meters_total` - Optional total square meters for the whole property.
-    /// * `euros` - Price in euros.
-    /// * `street_address` - Street address.
-    /// * `year` - Optional construction year.
-    /// * `cottage_location` - Location for the cottage.
+    /// * `announcement` - Announcement for the house.
+    /// * `location_comparison` - Location for the location.
     /// * `open_route_service_token` - Open Route Service key.
-    /// * `cache` - Use cache?
+    /// * `cache_elisa_fixed_broadband_products` - Use cache when getting Elisa fixed broadband products?
+    /// * `house_min_square_meters` - Optional minimum area in square meters of the house.
+    /// * `max_distance_km` - Optional maximum distance in kilometers to the location.
+    /// * `min_mbps` - Optional minimum megabits per second for the internet.
+    /// * `exclude_texts` - Exclude house if it's text data has one of these texts.
     pub(super) fn new(
-        url: &std::primitive::str,
-        location: longitude::Location,
-        square_meters_house: std::primitive::f64,
-        square_meters_total: std::option::Option<std::primitive::f64>,
-        euros: std::primitive::u32,
-        street_address: &std::primitive::str,
-        year: std::option::Option<std::primitive::u16>,
-        cottage_location: longitude::Location,
-        open_route_service_token: &std::primitive::str,
-        cache: std::primitive::bool,
+        announcement: A,
+        location_comparison: std::option::Option<longitude::Location>,
+        open_route_service_token: std::option::Option<std::string::String>,
+        cache_elisa_fixed_broadband_products: std::primitive::bool,
+        house_min_square_meters: std::option::Option<std::primitive::u16>,
+        max_distance_km: std::option::Option<std::primitive::u16>,
+        min_mbps: std::option::Option<std::primitive::u32>,
+        exclude_texts: std::vec::Vec<std::string::String>,
     ) -> Self {
         Self {
-            url: url.to_string(),
-            location,
-            square_meters_house,
-            square_meters_total,
-            euros,
-            street_address: street_address.to_string(),
-            year,
-            cottage_location,
-            open_route_service_token: open_route_service_token.to_string(),
-            cache,
-            biking_km_to_cottage: None,
+            announcement,
+            location_comparison,
+            open_route_service_token,
+            cache_elisa_fixed_broadband_products,
+            biking_km_to_location: None,
+            house_min_square_meters,
+            max_distance_km,
+            min_mbps,
+            exclude_texts,
         }
     }
 
-    /// Distance to cottage directly.
-    pub(self) fn distance_to_cottage(&self) -> longitude::Distance {
-        self.location.distance(&self.cottage_location)
+    /// Distance to location directly.
+    pub(self) fn distance_to_location(&self) -> std::option::Option<longitude::Distance> {
+        if let Some(location_comparison) = &self.location_comparison {
+            if let Some(location_house) = &self.announcement.location() {
+                return Some(location_house.distance(location_comparison));
+            }
+        }
+
+        return None;
     }
 
     /// Internet products that meet my requirements.
@@ -68,103 +66,150 @@ impl House {
         postal_code: &std::primitive::str,
     ) -> std::result::Result<std::vec::Vec<super::Internet>, crate::client::JSONError> {
         let mut internets: std::vec::Vec<super::Internet> = std::vec::Vec::<super::Internet>::new();
-        for elisa_product in crate::elisa::Elisa::new(postal_code, &self.street_address, self.cache)
-            .await?
-            .products()
+        for elisa_product in crate::elisa::Elisa::new(
+            postal_code,
+            &self.announcement.street_address(),
+            self.cache_elisa_fixed_broadband_products,
+        )
+        .await?
+        .products()
         {
             let mbps: std::primitive::u32 = elisa_product.mbps();
-            if mbps == 0 || 100 < mbps {
-                internets.push(super::Internet {
-                    name: elisa_product.name(),
-                    euros_per_month: elisa_product.euros_per_month(),
-                    mbps: elisa_product.mbps(),
-                });
+            if let Some(min_mbps) = self.min_mbps {
+                if mbps != 0 && mbps < min_mbps {
+                    continue;
+                }
             }
+            internets.push(super::Internet {
+                name: elisa_product.name(),
+                euros_per_month: elisa_product.euros_per_month(),
+                mbps,
+            });
         }
         return Ok(internets);
     }
 
-    /// Biking distance in kilometers to cottage.
-    pub(self) async fn biking_km_to_cottage(
+    /// Biking distance in kilometers to location.
+    pub(self) async fn biking_km_to_location(
         &mut self,
-    ) -> std::result::Result<std::primitive::f64, crate::open_route_service::Error> {
-        if self.biking_km_to_cottage.is_none() {
-            self.biking_km_to_cottage = Some(
-                crate::open_route_service::OpenRouteService::new(&self.open_route_service_token)?
-                    .biking_km(self.location.clone(), self.cottage_location.clone())
-                    .await?,
-            );
+    ) -> std::result::Result<
+        std::option::Option<std::primitive::u16>,
+        crate::open_route_service::Error,
+    > {
+        if self.biking_km_to_location.is_none() {
+            if let Some(location_comparison) = &self.location_comparison {
+                if let Some(open_route_service_token) = &self.open_route_service_token {
+                    if let Some(location) = &self.announcement.location() {
+                        self.biking_km_to_location = Some(
+                            crate::open_route_service::OpenRouteService::new(
+                                open_route_service_token,
+                            )?
+                            .biking_km(location.clone(), location_comparison.clone())
+                            .await?,
+                        );
+                    }
+                }
+            }
         }
-        return Ok(self.biking_km_to_cottage.unwrap());
+        return Ok(self.biking_km_to_location);
     }
 
     /// Include house as one of the options?
-    pub(super) async fn include(
+    pub(self) async fn include(
         &mut self,
-    ) -> std::result::Result<std::primitive::bool, crate::open_route_service::Error> {
-        Ok(40.00 <= self.square_meters_house
-            && self.distance_to_cottage().kilometers() <= 35.0
-            && self.biking_km_to_cottage().await? <= 35.0)
+    ) -> std::result::Result<std::primitive::bool, super::Error> {
+        // Check area.
+        if let Some(house_min_square_meters) = self.house_min_square_meters {
+            if let Some(square_meters_house) = self.announcement.square_meters_house() {
+                if square_meters_house < house_min_square_meters {
+                    return Ok(false);
+                }
+            } else if let Some(square_meters_total) = self.announcement.square_meters_total() {
+                if square_meters_total < house_min_square_meters {
+                    return Ok(false);
+                }
+            }
+        }
+
+        // Check distance.
+        if let Some(max_distance_km) = self.max_distance_km {
+            if let Some(distance_to_location) = self.distance_to_location() {
+                if max_distance_km < distance_to_location.kilometers().ceil() as std::primitive::u16
+                {
+                    return Ok(false);
+                }
+            }
+            if let Some(biking_km_to_location) = self.biking_km_to_location().await? {
+                if max_distance_km < biking_km_to_location {
+                    return Ok(false);
+                }
+            }
+        }
+
+        // Check texts.
+        if !self.exclude_texts.is_empty() {
+            let text_lowercase: std::string::String =
+                self.announcement.text().await?.to_lowercase();
+            for invalid_text in &self.exclude_texts {
+                if text_lowercase.contains(invalid_text) {
+                    return Ok(false);
+                }
+            }
+        }
+
+        return Ok(true);
     }
 
-    /// Message about house.
+    /// Result for the house.
     ///
     /// # Arguments
     /// * `postal_code` - Postal code for the house.
-    pub(super) async fn message(
+    pub(super) async fn result(
         &mut self,
-        postal_code: &std::primitive::str,
-    ) -> Result<std::string::String, crate::open_route_service::Error> {
-        let mut message: std::string::String = std::string::String::new();
-        message.push_str(&self.url);
-        message.push_str(":");
-
-        message.push_str("\n\tPrice: ");
-        message.push_str(&(self.euros / 1000).to_string());
-        message.push_str(" k€");
-
-        let euros: std::primitive::f64 = self.euros as std::primitive::f64;
-        message.push_str("\n\tArea (house): ");
-        message.push_str(&self.square_meters_house.floor().to_string());
-        message.push_str(" m²");
-
-        message.push_str("\n\tPrice/Area (house): ");
-        message.push_str(&((euros / self.square_meters_house).ceil()).to_string());
-        message.push_str(" €/m²");
-
-        match self.square_meters_total {
-            Some(square_meters_total) => {
-                message.push_str("\n\tArea (total): ");
-                message.push_str(&square_meters_total.floor().to_string());
-                message.push_str(" m²");
-
-                message.push_str("\n\tPrice/Area (total): ");
-                message.push_str(&((euros / square_meters_total).ceil()).to_string());
-                message.push_str(" €/m²");
-            }
-            None => {}
+    ) -> std::result::Result<std::option::Option<super::Result>, super::Error> {
+        if !self.include().await? {
+            return Ok(None);
         }
-
-        message.push_str("\n\tBiking from cottage: ");
-        message.push_str(&self.biking_km_to_cottage().await?.ceil().to_string());
-        message.push_str(" km");
-
-        match self.year {
-            Some(year) => {
-                message.push_str("\n\tYear: ");
-                message.push_str(&year.to_string());
-            }
-            None => {}
-        }
-
-        let internets: std::vec::Vec<super::Internet> = self.internets(postal_code).await?;
-        if !internets.is_empty() {
-            message.push_str("\n\tInternet:");
-            for internet in internets {
-                message.push_str("\n\t- ");
-                message.push_str(&internet.to_str());
-            }
-        }
-        Ok(message)
+        let euros: std::option::Option<u32> = self.announcement.euros();
+        let square_meters_house: std::option::Option<u16> = self.announcement.square_meters_house();
+        let square_meters_total: std::option::Option<u16> = self.announcement.square_meters_total();
+        let postal_code: std::string::String = self.announcement.postal_code().await?;
+        Ok(Some(super::Result::new(
+            self.announcement.url().clone(),
+            match euros {
+                Some(euros) => Some(euros / 1000),
+                None => None,
+            },
+            self.announcement.floors().await?,
+            square_meters_house,
+            match euros {
+                Some(euros) => match square_meters_house {
+                    Some(square_meters_house) => {
+                        Some(euros / square_meters_house as std::primitive::u32)
+                    }
+                    None => None,
+                },
+                None => None,
+            },
+            square_meters_total,
+            match euros {
+                Some(euros) => match square_meters_total {
+                    Some(square_meters_total) => {
+                        Some(euros / square_meters_total as std::primitive::u32)
+                    }
+                    None => None,
+                },
+                None => None,
+            },
+            match self.distance_to_location() {
+                Some(distance_to_location) => {
+                    Some(distance_to_location.kilometers().ceil() as std::primitive::u16)
+                }
+                None => None,
+            },
+            self.biking_km_to_location().await?,
+            self.announcement.year(),
+            self.internets(&postal_code).await?,
+        )))
     }
 }

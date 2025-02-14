@@ -1,18 +1,22 @@
 /// HTTP client for making requests to the APIs.
-pub(crate) struct Client {
+pub(crate) struct Client<L: super::Limiter> {
     pub(self) client: reqwest::Client,
     pub(self) cache: std::option::Option<crate::cache::Cache>,
+    pub(self) limiter: std::option::Option<std::sync::Arc<tokio::sync::Mutex<L>>>,
 }
 
-impl Client {
+impl<L: super::Limiter> Client<L> {
     /// Initilizes a new client.
     ///
     /// # Arguments
     /// * `cache_name` - If provided, the client will cache the responses with the given name.
+    /// * `max_every_ms` - The client will rate limit the requests to domain to every this many milliseconds, set to 0 to turn off.
+    /// * `max_per_minute` - If provided, the client will rate limit the requests to the given amount per minute.
     pub(crate) fn new(
         cache_name: std::option::Option<&std::primitive::str>,
+        limiter: std::option::Option<std::sync::Arc<tokio::sync::Mutex<L>>>,
     ) -> std::result::Result<Self, super::RequestError> {
-        return Ok(Self {
+        Ok(Self {
             client: reqwest::Client::builder().cookie_store(true).build()?,
             cache: match cache_name {
                 Some(cache_name) => Some(crate::cache::Cache::new(
@@ -21,7 +25,8 @@ impl Client {
                 )?),
                 None => None,
             },
-        });
+            limiter,
+        })
     }
 
     /// Generate cache from given data.
@@ -50,10 +55,10 @@ impl Client {
     /// * `json` - Optional JSON data of the request to use as part of cache key.
     pub(self) async fn response_to_text(
         &self,
+        url: &std::primitive::str,
         response: reqwest::Response,
         json: std::option::Option<serde_json::Value>,
     ) -> std::result::Result<std::string::String, super::RequestError> {
-        let url: std::string::String = response.url().to_string();
         let text: std::string::String = response.text().await?;
         match self.cache.as_ref() {
             Some(cache) => {
@@ -86,30 +91,98 @@ impl Client {
         }
     }
 
-    /// Make a GET request.
+    /// Rate limit the requests.
+    pub(self) async fn rate_limit(&self) -> Result<(), url::ParseError> {
+        if let Some(limiter) = &self.limiter {
+            let mut limiter: tokio::sync::MutexGuard<'_, L> = limiter.lock().await;
+            limiter.limit().await;
+        }
+        return Ok(());
+    }
+
+    /// Make a request.
     ///
     /// # Arguments
-    /// * `url` - To this URL.
-    pub(self) async fn get(
+    /// * `method` - Method for the request.
+    /// * `url` - URL for the request.
+    /// * `json` - Optional JSON data for the request.
+    /// * `headers` - Optional headers for the request.
+    pub(self) async fn request(
         &self,
+        method: reqwest::Method,
         url: &std::primitive::str,
-    ) -> std::result::Result<reqwest::Response, reqwest::Error> {
-        self.client.get(url).send().await
+        json: std::option::Option<serde_json::Value>,
+        headers: std::option::Option<reqwest::header::HeaderMap>,
+    ) -> std::result::Result<reqwest::Response, super::RequestError> {
+        self.rate_limit().await?;
+
+        let mut builder: reqwest::RequestBuilder = self.client.request(method, url);
+        if let Some(headers) = headers {
+            builder = builder.headers(headers);
+        }
+        if let Some(json) = json {
+            builder = builder.json(&json);
+        }
+
+        return Ok(builder.send().await?.error_for_status()?);
     }
 
     /// Get text from the given URL.
     /// If cache is enabled, the text is cached and returned from cache.
     ///
     /// # Arguments
-    /// * `url` - URL to get text from.
-    pub(self) async fn get_text(
+    /// * `method` - Method for the request.
+    /// * `url` - URL for the request.
+    /// * `json` - Optional JSON data for the request.
+    /// * `headers` - Optional headers for the request.
+    pub(self) async fn text(
         &self,
+        method: reqwest::Method,
         url: &std::primitive::str,
+        json: std::option::Option<serde_json::Value>,
+        headers: std::option::Option<reqwest::header::HeaderMap>,
     ) -> std::result::Result<std::string::String, super::RequestError> {
-        match self.text_from_cache(url, None)? {
+        match self.text_from_cache(url, json.clone())? {
             Some(text) => return Ok(text),
-            None => return Ok(self.response_to_text(self.get(url).await?, None).await?),
+            None => {
+                return Ok(self
+                    .response_to_text(
+                        url,
+                        self.request(method, url, json.clone(), headers).await?,
+                        json,
+                    )
+                    .await?);
+            }
         }
+    }
+
+    /// Get JSON from the given URL.
+    /// If cache is enabled, the JSON is cached and returned from cache.
+    ///
+    /// # Arguments
+    /// * `method` - Method for the request.
+    /// * `url` - URL for the request.
+    /// * `json` - Optional JSON data for the request.
+    /// * `headers` - Optional headers for the request.
+    pub(self) async fn json<T>(
+        &self,
+        method: reqwest::Method,
+        url: &std::primitive::str,
+        json: std::option::Option<serde_json::Value>,
+        headers: std::option::Option<reqwest::header::HeaderMap>,
+    ) -> std::result::Result<T, super::JSONError>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let mut headers_real: reqwest::header::HeaderMap =
+            headers.unwrap_or(reqwest::header::HeaderMap::new());
+        let _: std::option::Option<reqwest::header::HeaderValue> = headers_real.insert(
+            reqwest::header::CONTENT_TYPE,
+            reqwest::header::HeaderValue::from_static("application/json"),
+        );
+        return Ok(serde_json::from_str::<T>(
+            &self.text(method, url, json, Some(headers_real)).await?,
+        )?);
     }
 
     /// Get JSON from the given URL.
@@ -126,7 +199,7 @@ impl Client {
     where
         T: serde::de::DeserializeOwned,
     {
-        Ok(serde_json::from_str::<T>(&self.get_text(url).await?)?)
+        self.json(reqwest::Method::GET, url, None, None).await
     }
 
     /// Get text from the given URL and extract a value using regex.
@@ -135,62 +208,11 @@ impl Client {
     /// # Arguments
     /// * `url` - URL to get text from.
     /// * `regex` - Regex to extract the value with.
-    pub(crate) async fn get_regex(
+    pub(crate) async fn get_text(
         &self,
         url: &std::primitive::str,
-        regex: &std::primitive::str,
-    ) -> std::result::Result<std::string::String, super::RegexError> {
-        Ok(regex::Regex::new(regex)?
-            .captures(&self.get_text(url).await?)
-            .unwrap()
-            .get(1)
-            .unwrap()
-            .as_str()
-            .to_string())
-    }
-
-    /// Make a POST request.
-    ///
-    /// # Arguments
-    /// * `url` - To this URL.
-    /// * `json` - JSON data to send.
-    /// * `headers` - Optional headers to send in addition to Content-Type: application/json.
-    pub(self) async fn post(
-        &self,
-        url: &std::primitive::str,
-        json: serde_json::Value,
-        headers: std::option::Option<reqwest::header::HeaderMap>,
-    ) -> std::result::Result<reqwest::Response, reqwest::Error> {
-        self.client
-            .post(url)
-            .headers(headers.unwrap_or(reqwest::header::HeaderMap::new()))
-            .header("Content-Type", "application/json")
-            .json(&json)
-            .send()
-            .await
-    }
-
-    /// Make POST request and get text.
-    /// If cache is enabled, the text is cached and returned from cache.
-    ///
-    /// # Arguments
-    /// * `url` - URL to post to.
-    /// * `json` - JSON data to send.
-    /// * `headers` - Optional headers to send in addition to Content-Type: application/json.
-    pub(self) async fn post_text(
-        &self,
-        url: &std::primitive::str,
-        json: serde_json::Value,
-        headers: std::option::Option<reqwest::header::HeaderMap>,
     ) -> std::result::Result<std::string::String, super::RequestError> {
-        match self.text_from_cache(url, Some(json.clone()))? {
-            Some(text) => return Ok(text),
-            None => {
-                return self
-                    .response_to_text(self.post(url, json.clone(), headers).await?, Some(json))
-                    .await
-            }
-        }
+        self.text(reqwest::Method::GET, url, None, None).await
     }
 
     /// Make POST request and get JSON.
@@ -211,8 +233,7 @@ impl Client {
     where
         T: serde::de::DeserializeOwned,
     {
-        Ok(serde_json::from_str::<T>(
-            &self.post_text(url, json, headers).await?,
-        )?)
+        self.json(reqwest::Method::POST, url, Some(json), headers)
+            .await
     }
 }
