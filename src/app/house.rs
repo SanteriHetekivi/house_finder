@@ -1,4 +1,6 @@
 /// House to buy.
+use super::Internet;
+
 pub(crate) struct House<A: super::Announcement> {
     pub(self) announcement: A,
     pub(self) location_comparison: std::option::Option<longitude::Location>,
@@ -57,36 +59,29 @@ impl<A: super::Announcement> House<A> {
         return None;
     }
 
-    /// Internet products that meet my requirements.
+    /// Internets as strings.
     ///
     /// # Arguments
     /// * `postal_code` - Postal code for the house.
-    pub(self) async fn internets(
+    pub(self) async fn internet_strings(
         &self,
         postal_code: &std::primitive::str,
-    ) -> std::result::Result<std::vec::Vec<super::Internet>, crate::client::JSONError> {
-        let mut internets: std::vec::Vec<super::Internet> = std::vec::Vec::<super::Internet>::new();
-        for elisa_product in crate::elisa::Elisa::new(
+    ) -> std::result::Result<std::vec::Vec<std::string::String>, crate::client::JSONError> {
+        let mut internet_strings: std::vec::Vec<std::string::String> =
+            std::vec::Vec::<std::string::String>::new();
+        for elisa_internet in crate::elisa::Elisa::new(
             postal_code,
             &self.announcement.street_address(),
             self.cache_elisa_fixed_broadband_products,
         )
         .await?
-        .products()
+        .internets()
         {
-            let mbps: std::primitive::u32 = elisa_product.mbps();
-            if let Some(min_mbps) = self.min_mbps {
-                if mbps != 0 && mbps < min_mbps {
-                    continue;
-                }
+            if elisa_internet.check_mbps(self.min_mbps) {
+                internet_strings.push(elisa_internet.to_str());
             }
-            internets.push(super::Internet {
-                name: elisa_product.name(),
-                euros_per_month: elisa_product.euros_per_month(),
-                mbps,
-            });
         }
-        return Ok(internets);
+        return Ok(internet_strings);
     }
 
     /// Biking distance in kilometers to location.
@@ -209,7 +204,7 @@ impl<A: super::Announcement> House<A> {
             },
             self.biking_km_to_location().await?,
             self.announcement.year(),
-            self.internets(&postal_code).await?,
+            self.internet_strings(&postal_code).await?,
         )))
     }
 }
