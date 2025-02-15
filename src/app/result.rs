@@ -10,7 +10,7 @@ pub(super) struct Result {
     pub(self) km_to_location_straight: std::option::Option<std::primitive::u16>,
     pub(self) km_to_location_biking: std::option::Option<std::primitive::u16>,
     pub(self) year: std::option::Option<std::primitive::u16>,
-    pub(self) internets: std::vec::Vec<super::Internet>,
+    pub(self) internet_strings: std::vec::Vec<std::string::String>,
 }
 
 /// Information about a field.
@@ -31,7 +31,7 @@ pub(self) struct FieldToInfo {
     pub(self) km_to_location_straight: FieldInfo,
     pub(self) km_to_location_biking: FieldInfo,
     pub(self) year: FieldInfo,
-    pub(self) internets: FieldInfo,
+    pub(self) internet_strings: FieldInfo,
 }
 
 /// Field to information map.
@@ -76,7 +76,7 @@ const FIELD_TO_INFO: FieldToInfo = FieldToInfo {
         title: "Year",
         unit: None,
     },
-    internets: FieldInfo {
+    internet_strings: FieldInfo {
         title: "Internet",
         unit: None,
     },
@@ -96,7 +96,7 @@ impl Result {
     /// * `km_to_location_straight` - Optional distance to location straight.
     /// * `km_to_location_biking` - Optional distance to location biking.
     /// * `year` - Optional construction year.
-    /// * `internets` - Internet products.
+    /// * `internet_strings` - Internet products as strings.
     pub(super) fn new(
         url: std::string::String,
         thousands_of_euros: std::option::Option<std::primitive::u32>,
@@ -108,7 +108,7 @@ impl Result {
         km_to_location_straight: std::option::Option<std::primitive::u16>,
         km_to_location_biking: std::option::Option<std::primitive::u16>,
         year: std::option::Option<std::primitive::u16>,
-        internets: std::vec::Vec<super::Internet>,
+        internet_strings: std::vec::Vec<std::string::String>,
     ) -> Self {
         Self {
             url,
@@ -120,7 +120,7 @@ impl Result {
             km_to_location_straight,
             km_to_location_biking,
             year,
-            internets,
+            internet_strings,
             floors,
         }
     }
@@ -208,12 +208,12 @@ impl Result {
             message.push_str(&Self::message_line(FIELD_TO_INFO.year, year.to_string()));
         }
 
-        if !self.internets.is_empty() {
+        if !self.internet_strings.is_empty() {
             message.push_str(&Self::message_line(
-                FIELD_TO_INFO.internets,
-                self.internets
+                FIELD_TO_INFO.internet_strings,
+                self.internet_strings
                     .iter()
-                    .map(|internet| format!("\n\t- {}", internet.to_str()))
+                    .map(|internet_string| format!("\n\t- {}", internet_string))
                     .collect::<std::string::String>(),
             ));
         }
@@ -249,7 +249,7 @@ impl Result {
             Self::csv_title_row_cell(FIELD_TO_INFO.km_to_location_straight),
             Self::csv_title_row_cell(FIELD_TO_INFO.km_to_location_biking),
             Self::csv_title_row_cell(FIELD_TO_INFO.year),
-            Self::csv_title_row_cell(FIELD_TO_INFO.internets),
+            Self::csv_title_row_cell(FIELD_TO_INFO.internet_strings),
         ]
     }
 
@@ -293,9 +293,9 @@ impl Result {
                 Some(year) => year.to_string(),
                 None => "".to_string(),
             },
-            self.internets
+            self.internet_strings
                 .iter()
-                .map(|internet| format!("\n{}", internet.to_str()))
+                .map(|internet_string| format!("\n{}", internet_string))
                 .collect::<std::string::String>(),
         ]
     }

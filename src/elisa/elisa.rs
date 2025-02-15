@@ -1,5 +1,5 @@
 pub(crate) struct Elisa {
-    products: std::vec::Vec<super::Product>,
+    internets: std::vec::Vec<super::Internet>,
 }
 
 static LIMITER: once_cell::sync::Lazy<
@@ -17,7 +17,7 @@ impl Elisa {
         street_address: &std::primitive::str,
         cache_fixed_boardband_products: std::primitive::bool,
     ) -> std::result::Result<Self, crate::client::JSONError> {
-        let mut products: std::vec::Vec<super::Product> = std::vec::Vec::<super::Product>::new();
+        let mut internets: std::vec::Vec<super::Internet> = std::vec::Vec::<super::Internet>::new();
         for address in crate::client::Client::new(
             // We should alwaus cache the address result, because it is not likely to change.
             Some("elisa/address/search"),
@@ -44,17 +44,17 @@ impl Elisa {
             .await?
             .fbb_products
             {
-                // Do not include mobile broadband products.
-                if product.include() {
-                    products.push(product.clone());
+                let internet: super::Internet = super::Internet::new(product);
+                if internet.include() {
+                    internets.push(internet);
                 }
             }
         }
-        Ok(Self { products })
+        Ok(Self { internets })
     }
 
     /// Get internet products.
-    pub(crate) fn products(&self) -> std::vec::Vec<super::Product> {
-        self.products.clone()
+    pub(crate) fn internets(&self) -> std::vec::Vec<super::Internet> {
+        self.internets.clone()
     }
 }
